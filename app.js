@@ -92,11 +92,14 @@ function mostrarTela(id) {
     window.scrollTo(0, 0);
 }
 
-window.irParaHome = () => {
+window.irParaHome = async () => {
     document.getElementById('feed-tabs')?.classList.remove('hidden');
     mostrarTela('feed-container');
-    paginaAtual = 0;
-    carregarFeed('Geral');
+
+    await Promise.all([
+        carregarServicos(),
+        carregarEmpregos()
+    ]);
 };
 
 // --- AVISOS ---
