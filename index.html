@@ -11,88 +11,50 @@
 
 <body class="bg-gray-100 text-gray-900">
 
-  <!-- 🔒 AUTH SCREEN (OBRIGATÓRIO) -->
-  <div id="auth-screen" class="hidden p-6">
-    <h1 class="text-xl font-bold mb-4">Entrar</h1>
-    <input id="auth-email" placeholder="Email" class="w-full p-3 mb-3 border rounded">
-    <input id="auth-password" type="password" placeholder="Senha" class="w-full p-3 mb-3 border rounded">
-    <button onclick="fazerLogin()" class="w-full bg-blue-600 text-white p-3 rounded mb-2">Entrar</button>
-    <button onclick="fazerCadastro()" class="w-full bg-gray-300 p-3 rounded">Cadastrar</button>
+<header class="bg-white shadow-sm p-4 flex justify-between items-center">
+  <div>
+    <p class="text-sm text-gray-500">📍 Feira de Santana</p>
+    <h1 class="text-lg font-bold">Gente da Feira</h1>
   </div>
+  <button id="btn-sair" onclick="logout()" class="text-sm text-red-500 hidden">Sair</button>
+</header>
 
-  <!-- 🏠 HOME -->
-  <div id="feed-container">
+<section class="p-4">
+  <input 
+    id="busca"
+    type="text" 
+    placeholder="O que você precisa agora?" 
+    class="w-full p-4 rounded-xl border"
+  >
+</section>
 
-    <!-- HEADER -->
-    <header class="bg-white shadow-sm p-4 flex justify-between items-center">
-      <div>
-        <p class="text-sm text-gray-500">📍 Seu bairro</p>
-        <h1 class="text-lg font-bold">Gente da Feira</h1>
-      </div>
-      <button id="btn-sair" onclick="fazerLogout()" class="text-sm text-red-500 hidden">Sair</button>
-    </header>
+<section class="px-4 grid grid-cols-2 gap-3">
+  <button onclick="carregarEmpregos()" class="bg-white p-4 rounded-xl shadow">💼 Empregos</button>
+  <button onclick="carregarServicos()" class="bg-white p-4 rounded-xl shadow">🧑‍🔧 Serviços</button>
+</section>
 
-    <!-- BUSCA -->
-    <section class="p-4">
-      <input 
-        type="text" 
-        placeholder="O que você precisa agora?" 
-        class="w-full p-4 rounded-xl border"
-      >
-    </section>
+<section class="p-4">
+  <h2 class="font-bold mb-3">🧑‍🔧 Serviços</h2>
+  <div id="servicos-container"></div>
+</section>
 
-    <!-- AÇÕES -->
-    <section class="px-4 grid grid-cols-2 gap-3">
-      <button onclick="carregarEmpregos()" class="bg-white p-4 rounded-xl shadow">
-        💼 Empregos
-      </button>
-      <button class="bg-white p-4 rounded-xl shadow">
-        💸 Promoções
-      </button>
-      <button onclick="carregarServicos()" class="bg-white p-4 rounded-xl shadow">
-        🧑‍🔧 Serviços
-      </button>
-      <button onclick="carregarFeed('Local')" class="bg-white p-4 rounded-xl shadow">
-        ⚠️ Avisos
-      </button>
-    </section>
+<section class="p-4">
+  <h2 class="font-bold mb-3">💼 Empregos</h2>
+  <div id="empregos-container"></div>
+</section>
 
-    <!-- SERVIÇOS -->
-    <section class="p-4">
-      <h2 class="font-bold mb-3">🧑‍🔧 Serviços agora</h2>
-      <div id="servicos-container"></div>
-    </section>
+<section class="p-4 pb-24">
+  <h2 class="font-bold mb-3">💬 Bairro</h2>
+  <div id="feed-container"></div>
+</section>
 
-    <!-- EMPREGOS -->
-    <section class="p-4">
-      <h2 class="font-bold mb-3">💼 Vagas agora</h2>
-      <div id="empregos-container"></div>
-    </section>
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 text-sm">
+  <button onclick="init()">🏠</button>
+  <button onclick="carregarFeed()">📍</button>
+</nav>
 
-    <!-- FEED REAL (SEU SISTEMA ANTIGO) -->
-    <section class="p-4 pb-24">
-      <h2 class="font-bold mb-3">💬 Bairro</h2>
-      <div id="feed-real"></div>
-    </section>
-
-  </div>
-
-  <!-- NAV -->
-  <nav id="main-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 text-sm hidden">
-    <button onclick="irParaHome()">🏠</button>
-    <button onclick="carregarFeed('Local')">📍</button>
-    <button onclick="abrirPostagem()">➕</button>
-    <button onclick="mostrarPerfilProprio()">👤</button>
-  </nav>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="app.js"></script>
-
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/service-worker.js");
-    }
-  </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
