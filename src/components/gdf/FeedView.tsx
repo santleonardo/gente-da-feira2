@@ -302,11 +302,28 @@ function ShareMenu({
   post,
   onClose,
   onRepost,
+  triggerRef,
 }: {
   post: PostWithAuthor;
   onClose: () => void;
   onRepost: (post: PostWithAuthor) => void;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
 }) {
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  useEffect(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.top - 4, right: window.innerWidth - rect.right });
+    const onScroll = () => {
+      if (!triggerRef.current) return;
+      const r = triggerRef.current.getBoundingClientRect();
+      setPos({ top: r.top - 4, right: window.innerWidth - r.right });
+    };
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
+  }, [triggerRef]);
+
   const handleExternalShare = async () => {
     const shareData = {
       title: `Post de ${post.author.display_name}`,
@@ -332,8 +349,17 @@ function ShareMenu({
     onClose();
   };
 
+  if (!pos) return null;
+
+  // Check if menu would go above viewport; flip below if needed
+  const menuHeight = 140;
+  const flipBelow = pos.top - menuHeight < 8;
+
   return (
-    <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border bg-card p-1.5 shadow-xl z-30 animate-in fade-in-0 zoom-in-95">
+    <div
+      className="fixed w-52 rounded-xl border bg-card p-1.5 shadow-xl z-[999] animate-in fade-in-0 zoom-in-95"
+      style={{ right: pos.right, ...(flipBelow ? { top: pos.top + 36 } : { bottom: window.innerHeight - pos.top }) }}
+    >
       <button
         onClick={() => { onRepost(post); onClose(); }}
         className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-accent"
@@ -1286,7 +1312,7 @@ function PostThread({
   const { roots: commentRoots, map: commentMap } = buildCommentTree(comments);
 
   return (
-    <div className={`rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-md ${isOwnPost ? "border-primary/10" : ""}`}>
+    <div className={`rounded-2xl border bg-card shadow-sm overflow-hidden transition-shadow hover:shadow-md ${isOwnPost ? "border-primary/10" : ""}`}>
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start gap-3">
@@ -1428,6 +1454,7 @@ function PostThread({
                     post={post}
                     onClose={() => setShareMenuOpen(null)}
                     onRepost={onRepost}
+                    triggerRef={shareRef}
                   />
                 )}
               </div>
