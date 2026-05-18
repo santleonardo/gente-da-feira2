@@ -37,6 +37,9 @@ import {
   Send,
   FileText,
   PenSquare,
+  MessageCircle,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { getInitials, getAvatarColor, timeAgo, BAIRROS } from "@/lib/constants";
 import { UserAvatar } from "./UserAvatar";
@@ -99,6 +102,7 @@ interface PostStyle {
 }
 
 function formatDuration(seconds: number): string {
+  if (!seconds || !isFinite(seconds) || isNaN(seconds)) return "0:00";
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
@@ -220,6 +224,7 @@ export function ProfileView() {
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
   const fontMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [editorExpanded, setEditorExpanded] = useState(false);
 
   // Media state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -855,21 +860,30 @@ export function ProfileView() {
               className="rounded-xl border border-[#0A4D5C]/8 overflow-hidden transition-all"
               style={{ backgroundColor: selectedColor.bg }}
             >
-              <textarea
-                ref={textareaRef}
-                placeholder="Escreva algo bonito... Selecione texto e use B/I para formatar"
-                value={content}
-                onChange={(e) => setContent(e.target.value.slice(0, 500))}
-                className="w-full min-h-[100px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none placeholder:opacity-40"
-                style={{
-                  color: selectedColor.text,
-                  fontFamily: postStyle.font ? `'${postStyle.font}', sans-serif` : undefined,
-                  fontWeight: postStyle.bold ? 700 : 400,
-                  fontStyle: postStyle.italic ? "italic" : "normal",
-                  textAlign: postStyle.alignment || "left",
-                }}
-                rows={4}
-              />
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  placeholder="Escreva algo bonito... Selecione texto e use B/I para formatar"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value.slice(0, 500))}
+                  className={`w-full resize-none border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none placeholder:opacity-40 transition-all ${editorExpanded ? "min-h-[220px]" : "min-h-[100px]"}`}
+                  style={{
+                    color: selectedColor.text,
+                    fontFamily: postStyle.font ? `'${postStyle.font}', sans-serif` : undefined,
+                    fontWeight: postStyle.bold ? 700 : 400,
+                    fontStyle: postStyle.italic ? "italic" : "normal",
+                    textAlign: postStyle.alignment || "left",
+                  }}
+                  rows={editorExpanded ? 10 : 4}
+                />
+                <button
+                  onClick={() => setEditorExpanded(!editorExpanded)}
+                  className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-[#0A4D5C]/[0.08] text-[#0A4D5C]/50 hover:bg-[#0A4D5C]/15 hover:text-[#0A4D5C] transition-colors"
+                  title={editorExpanded ? "Reduzir" : "Expandir"}
+                >
+                  {editorExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+                </button>
+              </div>
             </div>
 
             {/* Media previews */}
@@ -1099,7 +1113,7 @@ export function ProfileView() {
                 className="flex h-8 items-center gap-1.5 rounded-full bg-[#2EC4B6] text-[#f7f9fa] px-4 shadow-md hover:bg-[#25b0a3] active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100 shrink-0 text-xs font-semibold"
                 title="Publicar"
               >
-                {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
                 Publicar
               </button>
             </div>

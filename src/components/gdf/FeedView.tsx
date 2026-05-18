@@ -212,6 +212,7 @@ function getExpirationLabel(expiresAt: string): string {
 }
 
 function formatDuration(seconds: number): string {
+  if (!seconds || !isFinite(seconds) || isNaN(seconds)) return "0:00";
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
@@ -350,7 +351,7 @@ function AudioPlayer({ src }: { src: string }) {
           </div>
         </div>
       </div>
-      <audio ref={audioRef} src={src} preload="metadata" onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)} onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)} onEnded={() => setPlaying(false)} />
+      <audio ref={audioRef} src={src} preload="metadata" onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)} onLoadedMetadata={() => { const d = audioRef.current?.duration; setDuration(d && isFinite(d) ? d : 0); }} onEnded={() => setPlaying(false)} />
     </div>
   );
 }
@@ -1297,7 +1298,7 @@ export function FeedView({ openUserProfile }: { openUserProfile?: (userId: strin
                 <span className="text-xs font-semibold text-[#000305]">{repostingPost.author.display_name}</span>
                 <span className="text-[10px] text-[#0A4D5C]/40">@{repostingPost.author.username}</span>
               </div>
-              <p className="text-xs text-[#0A4D5C]/60 line-clamp-3">{repostingPost.content}</p>
+              <FormattedText className="text-xs text-[#0A4D5C]/60 line-clamp-3" content={repostingPost.content} />
             </div>
             <textarea
               placeholder="Adicione um comentário (opcional)..."
@@ -1612,7 +1613,7 @@ function PostThread({
                   </button>
 
                 </div>
-                <p className="text-xs text-[#0A4D5C]/60 leading-relaxed line-clamp-4">{post.shared_post.content}</p>
+                <FormattedText className="text-xs text-[#0A4D5C]/60 leading-relaxed line-clamp-4" content={post.shared_post.content} />
                 {post.shared_post.image_urls && post.shared_post.image_urls.length > 0 && (
                   <div className="mt-1.5 flex gap-1 overflow-x-auto">
                     {post.shared_post.image_urls.slice(0, 2).map((url, i) => (
@@ -1816,7 +1817,7 @@ function CommentItem({
             </button>
             <span className="text-[9px] sm:text-[10px] text-[#0A4D5C]/30">{timeAgo(comment.created_at)}</span>
           </div>
-          <p className="text-[11px] sm:text-xs text-[#000305]/80 leading-relaxed">{comment.content}</p>
+          <FormattedText className="text-[11px] sm:text-xs text-[#000305]/80 leading-relaxed" content={comment.content} />
           <div className="flex items-center gap-1.5 mt-0.5">
             <div className="relative">
               <button
