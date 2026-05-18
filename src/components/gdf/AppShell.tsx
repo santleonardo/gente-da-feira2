@@ -10,6 +10,7 @@ import { ProfileView } from "@/components/gdf/ProfileView";
 import { SettingsView } from "@/components/gdf/SettingsView";
 import { DiscoverView } from "@/components/gdf/DiscoverView";
 import { UserProfileDialog } from "@/components/gdf/UserProfileDialog";
+import { PostDetailDialog } from "@/components/gdf/PostDetailDialog";
 import { createClient } from "@/lib/supabase/client";
 import { Home, Users, MessageSquare, Compass, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,8 @@ export function AppShell() {
   const [checkedAuth, setCheckedAuth] = useState(false);
   const [profileDialogUserId, setProfileDialogUserId] = useState<string | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [postDetailPost, setPostDetailPost] = useState<any>(null);
+  const [postDetailOpen, setPostDetailOpen] = useState(false);
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -38,6 +41,18 @@ export function AppShell() {
     };
     window.addEventListener("openUserProfile", handler);
     return () => window.removeEventListener("openUserProfile", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const post = e.detail?.post;
+      if (post) {
+        setPostDetailPost(post);
+        setPostDetailOpen(true);
+      }
+    };
+    window.addEventListener("openPostDetail", handler);
+    return () => window.removeEventListener("openPostDetail", handler);
   }, []);
 
   const openUserProfile = useCallback((userId: string) => {
@@ -158,6 +173,8 @@ export function AppShell() {
       </main>
 
       <UserProfileDialog userId={profileDialogUserId} open={profileDialogOpen} onOpenChange={setProfileDialogOpen} />
+
+      <PostDetailDialog post={postDetailPost} open={postDetailOpen} onOpenChange={setPostDetailOpen} />
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden">
         <div className="mx-3 mb-3 flex items-center justify-around rounded-2xl border border-[#0A4D5C]/10 bg-[#f7f9fa]/95 backdrop-blur-xl shadow-lg px-2 py-1.5">
