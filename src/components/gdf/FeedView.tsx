@@ -1594,7 +1594,7 @@ function PostThread({
                 className="mt-1.5 text-[13px] sm:text-sm leading-relaxed whitespace-pre-wrap text-[#000305]"
                 content={post.content}
               />
-            )
+            )}
 
             {/* Shared post (repost) */}
             {post.shared_post && (
