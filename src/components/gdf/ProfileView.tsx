@@ -13,7 +13,6 @@ import {
   LogOut,
   Edit3,
   Camera,
-  Settings,
   Lock,
   Loader2,
   Bold,
@@ -43,6 +42,7 @@ import {
 } from "lucide-react";
 import { getInitials, getAvatarColor, timeAgo, BAIRROS } from "@/lib/constants";
 import { UserAvatar } from "./UserAvatar";
+import { SettingsView } from "./SettingsView";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -223,7 +223,7 @@ function FormattedText({
 }
 
 export function ProfileView() {
-  const { profile, logout, updateProfile, setProfileSubView, unreadNotifications } = useStore();
+  const { profile, logout, updateProfile } = useStore();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(profile?.display_name || "");
   const [bio, setBio] = useState(profile?.bio || "");
@@ -837,28 +837,8 @@ export function ProfileView() {
             </div>
           )}
 
-          {/* Configurações */}
-          <Card className="cursor-pointer hover:bg-[#f7f75e]/10 transition-colors border-[#01386A]/8" onClick={() => setProfileSubView("settings")}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f7f75e]/30">
-                    <Settings className="h-4 w-4 text-[#01386A]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[#000305]">Configurações</p>
-                    <p className="text-xs text-[#01386A]/40">Privacidade, seguidores e permissões</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {unreadNotifications > 0 && (
-                    <Badge variant="default" className="h-5 min-w-5 px-1.5 text-[10px] flex items-center justify-center bg-[#01386A] text-[#f7f9fa]">{unreadNotifications}</Badge>
-                  )}
-                  <span className="text-[#01386A]/30 text-sm">›</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Configurações — embutido */}
+          <SettingsView embedded />
 
           <Button variant="destructive" onClick={handleLogout} className="w-full gap-2">
             <LogOut className="h-4 w-4" /> Sair da conta

@@ -30,7 +30,7 @@ import {
 import { UserAvatar } from "./UserAvatar";
 import { toast } from "sonner";
 
-export function SettingsView() {
+export function SettingsView({ embedded = false }: { embedded?: boolean }) {
   const { profile, updateProfile, setProfileSubView } = useStore();
 
   const [isPrivate, setIsPrivate] = useState(profile?.is_private || false);
@@ -250,65 +250,67 @@ export function SettingsView() {
   if (!profile) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setProfileSubView("profile")}
-          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-accent transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h2 className="text-lg font-bold">Configurações</h2>
-      </div>
+    <div className={embedded ? "space-y-4" : "space-y-6"}>
+      {!embedded && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setProfileSubView("profile")}
+            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-accent transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-lg font-bold">Configurações</h2>
+        </div>
+      )}
 
       {/* PRIVACIDADE */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 mb-4">
-            <Shield className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Privacidade</h3>
+            <Shield className="h-4 w-4 text-[#0A4D5C]" />
+            <h3 className="text-sm font-semibold text-[#000305]">Privacidade</h3>
           </div>
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-sm font-medium">Perfil privado</p>
+                  <Lock className="h-3.5 w-3.5 text-[#0A4D5C]/40" />
+                  <p className="text-sm font-medium text-[#000305]">Perfil privado</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Quem não te segue não verá seus posts e informações</p>
+                <p className="text-xs text-[#0A4D5C]/40 mt-0.5">Quem não te segue não verá seus posts e informações</p>
               </div>
               <Switch checked={isPrivate} onCheckedChange={(v) => handlePrivacyChange("is_private", v)} disabled={privacyLoading} />
             </div>
-            <div className="border-t" />
+            <div className="border-t border-[#0A4D5C]/8" />
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-sm font-medium">Aprovar seguidores</p>
+                  <UserCheck className="h-3.5 w-3.5 text-[#0A4D5C]/40" />
+                  <p className="text-sm font-medium text-[#000305]">Aprovar seguidores</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Quem quiser te seguir precisará da sua aprovação</p>
+                <p className="text-xs text-[#0A4D5C]/40 mt-0.5">Quem quiser te seguir precisará da sua aprovação</p>
               </div>
               <Switch checked={approveFollowers} onCheckedChange={(v) => handlePrivacyChange("approve_followers", v)} disabled={privacyLoading} />
             </div>
-            <div className="border-t" />
+            <div className="border-t border-[#0A4D5C]/8" />
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-sm font-medium">Esconder seguindo</p>
+                  <EyeOff className="h-3.5 w-3.5 text-[#0A4D5C]/40" />
+                  <p className="text-sm font-medium text-[#000305]">Esconder seguindo</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Ninguém verá quem você está seguindo, inclusive seus seguidores</p>
+                <p className="text-xs text-[#0A4D5C]/40 mt-0.5">Ninguém verá quem você está seguindo, inclusive seus seguidores</p>
               </div>
               <Switch checked={hideFollowing} onCheckedChange={(v) => handlePrivacyChange("hide_following", v)} disabled={privacyLoading} />
             </div>
-            <div className="border-t" />
+            <div className="border-t border-[#0A4D5C]/8" />
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-sm font-medium">Esconder seguidores</p>
+                  <EyeOff className="h-3.5 w-3.5 text-[#0A4D5C]/40" />
+                  <p className="text-sm font-medium text-[#000305]">Esconder seguidores</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Ninguém verá seus seguidores, inclusive quem já te segue</p>
+                <p className="text-xs text-[#0A4D5C]/40 mt-0.5">Ninguém verá seus seguidores, inclusive quem já te segue</p>
               </div>
               <Switch checked={hideFollowers} onCheckedChange={(v) => handlePrivacyChange("hide_followers", v)} disabled={privacyLoading} />
             </div>
@@ -321,26 +323,26 @@ export function SettingsView() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-3">
-              <UserCheck className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold">Solicitações para seguir</h3>
-              <Badge variant="secondary" className="text-[10px] px-1.5">{pendingRequests.length}</Badge>
+              <UserCheck className="h-4 w-4 text-[#0A4D5C]" />
+              <h3 className="text-sm font-semibold text-[#000305]">Solicitações para seguir</h3>
+              <Badge variant="secondary" className="text-[10px] px-1.5 bg-[#f7f75e]/30 text-[#0A4D5C] border-0">{pendingRequests.length}</Badge>
             </div>
             <div className="space-y-2">
               {pendingRequests.map((req: any) => (
-                <div key={req.id} className="flex items-center gap-3 rounded-lg border p-2.5">
+                <div key={req.id} className="flex items-center gap-3 rounded-lg border border-[#0A4D5C]/8 p-2.5">
                   <UserAvatar
                     user={{ id: req.follower?.id || req.follower_id, display_name: req.follower?.display_name || "?", avatar_url: req.follower?.avatar_url }}
                     className="h-10 w-10"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{req.follower?.display_name}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">@{req.follower?.username}</p>
+                    <p className="text-sm font-medium truncate text-[#000305]">{req.follower?.display_name}</p>
+                    <p className="text-[11px] text-[#0A4D5C]/40 truncate">@{req.follower?.username}</p>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
-                    <Button size="sm" variant="default" onClick={() => handleRequestAction(req.id, "accept")} disabled={requestsLoading} className="h-7 px-2.5 gap-1 text-[11px]">
+                    <Button size="sm" variant="default" onClick={() => handleRequestAction(req.id, "accept")} disabled={requestsLoading} className="h-7 px-2.5 gap-1 text-[11px] bg-[#0A4D5C] hover:bg-[#0A4D5C]/90">
                       <UserCheck className="h-3 w-3" /> Aceitar
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleRequestAction(req.id, "reject")} disabled={requestsLoading} className="h-7 px-2.5 gap-1 text-[11px]">
+                    <Button size="sm" variant="outline" onClick={() => handleRequestAction(req.id, "reject")} disabled={requestsLoading} className="h-7 px-2.5 gap-1 text-[11px] border-[#0A4D5C]/10">
                       <UserX className="h-3 w-3" />
                     </Button>
                   </div>
@@ -355,14 +357,14 @@ export function SettingsView() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Gerenciar</h3>
+            <Users className="h-4 w-4 text-[#0A4D5C]" />
+            <h3 className="text-sm font-semibold text-[#000305]">Gerenciar</h3>
           </div>
           <div className="space-y-2">
-            <Button variant="outline" size="sm" onClick={openFollowersDialog} className="w-full justify-start gap-2">
+            <Button variant="outline" size="sm" onClick={openFollowersDialog} className="w-full justify-start gap-2 border-[#0A4D5C]/10 text-[#0A4D5C]">
               <UserX className="h-4 w-4" /> Remover seguidores
             </Button>
-            <Button variant="outline" size="sm" onClick={openBlockedDialog} className="w-full justify-start gap-2">
+            <Button variant="outline" size="sm" onClick={openBlockedDialog} className="w-full justify-start gap-2 border-[#0A4D5C]/10 text-[#0A4D5C]">
               <Ban className="h-4 w-4" /> Usuários bloqueados
             </Button>
           </div>
@@ -374,36 +376,28 @@ export function SettingsView() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-3">
-              <Bell className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold">Notificações recentes</h3>
+              <Bell className="h-4 w-4 text-[#0A4D5C]" />
+              <h3 className="text-sm font-semibold text-[#000305]">Notificações recentes</h3>
             </div>
             <div className="space-y-2">
-                           {notifications.slice(0, 5).map((notif: any) => {
-                const notifText: Record<string, string> = {
-                  follow: "começou a te seguir",
-                  follow_request: "solicitou te seguir",
-                  follow_accepted: "aceitou sua solicitação",
-                  reaction: "reagiu ao seu post",
-                  comment: "comentou no seu post",
-                };
-                return (
-                <div key={notif.id} className={`flex items-center gap-3 rounded-lg border p-2.5 ${!notif.is_read ? "bg-primary/5 border-primary/20" : ""}`}>
+              {notifications.slice(0, 5).map((notif: any) => (
+                <div key={notif.id} className={`flex items-center gap-3 rounded-lg border p-2.5 ${!notif.read ? "bg-[#f7f75e]/10 border-[#f7f75e]/30" : "border-[#0A4D5C]/8"}`}>
                   <UserAvatar
-                    user={{ id: notif.actor?.id || "", display_name: notif.actor?.display_name || "?", avatar_url: notif.actor?.avatar }}
+                    user={{ id: notif.from_user?.id || "", display_name: notif.from_user?.display_name || "?", avatar_url: notif.from_user?.avatar_url }}
                     className="h-8 w-8"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm">
-                      <span className="font-medium">{notif.actor?.display_name}</span>{" "}
-                      <span className="text-muted-foreground">{notifText[notif.type] || notif.type}</span>
+                      <span className="font-medium text-[#000305]">{notif.from_user?.display_name}</span>{" "}
+                      <span className="text-[#0A4D5C]/40">{notif.content}</span>
                     </p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[10px] text-[#0A4D5C]/40">
                       {new Date(notif.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                     </p>
                   </div>
-                  {!notif.is_read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                  {!notif.read && <div className="h-2 w-2 rounded-full bg-[#0A4D5C] shrink-0" />}
                 </div>
-              );})}
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -413,17 +407,17 @@ export function SettingsView() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 mb-3">
-            <Bell className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Permissões do dispositivo</h3>
+            <Bell className="h-4 w-4 text-[#0A4D5C]" />
+            <h3 className="text-sm font-semibold text-[#000305]">Permissões do dispositivo</h3>
           </div>
           <div className="space-y-2">
-            <Button variant="outline" size="sm" onClick={() => requestPermission("notifications")} className="w-full justify-start gap-2">
+            <Button variant="outline" size="sm" onClick={() => requestPermission("notifications")} className="w-full justify-start gap-2 border-[#0A4D5C]/10 text-[#0A4D5C]">
               <Bell className="h-4 w-4" /> Notificações
             </Button>
-            <Button variant="outline" size="sm" onClick={() => requestPermission("microphone")} className="w-full justify-start gap-2">
+            <Button variant="outline" size="sm" onClick={() => requestPermission("microphone")} className="w-full justify-start gap-2 border-[#0A4D5C]/10 text-[#0A4D5C]">
               <Mic className="h-4 w-4" /> Microfone
             </Button>
-            <Button variant="outline" size="sm" onClick={() => requestPermission("camera")} className="w-full justify-start gap-2">
+            <Button variant="outline" size="sm" onClick={() => requestPermission("camera")} className="w-full justify-start gap-2 border-[#0A4D5C]/10 text-[#0A4D5C]">
               <Video className="h-4 w-4" /> Câmera
             </Button>
           </div>
@@ -443,15 +437,15 @@ export function SettingsView() {
               <div className="space-y-2 py-4">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-2.5 animate-pulse">
-                    <div className="h-8 w-8 rounded-full bg-muted" />
-                    <div className="h-3 w-24 rounded bg-muted" />
+                    <div className="h-8 w-8 rounded-full bg-[#0A4D5C]/10" />
+                    <div className="h-3 w-24 rounded bg-[#0A4D5C]/10" />
                   </div>
                 ))}
               </div>
             ) : followers.length === 0 ? (
               <div className="py-8 text-center">
-                <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">Nenhum seguidor</p>
+                <Users className="h-8 w-8 text-[#0A4D5C]/20 mx-auto mb-2" />
+                <p className="text-xs text-[#0A4D5C]/40">Nenhum seguidor</p>
               </div>
             ) : (
               <div className="space-y-0.5">
@@ -459,10 +453,10 @@ export function SettingsView() {
                   <div key={u.id} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
                     <UserAvatar user={{ id: u.id, display_name: u.display_name, avatar_url: u.avatar_url }} className="h-8 w-8" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{u.display_name}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">@{u.username}</div>
+                      <div className="text-sm font-medium truncate text-[#000305]">{u.display_name}</div>
+                      <div className="text-[11px] text-[#0A4D5C]/40 truncate">@{u.username}</div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleRemoveFollower(u.id)} disabled={removingFollowerId === u.id} className="h-7 px-2 text-muted-foreground hover:text-destructive">
+                    <Button variant="ghost" size="sm" onClick={() => handleRemoveFollower(u.id)} disabled={removingFollowerId === u.id} className="h-7 px-2 text-[#0A4D5C]/40 hover:text-red-500">
                       {removingFollowerId === u.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
@@ -486,15 +480,15 @@ export function SettingsView() {
               <div className="space-y-2 py-4">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-2.5 animate-pulse">
-                    <div className="h-8 w-8 rounded-full bg-muted" />
-                    <div className="h-3 w-24 rounded bg-muted" />
+                    <div className="h-8 w-8 rounded-full bg-[#0A4D5C]/10" />
+                    <div className="h-3 w-24 rounded bg-[#0A4D5C]/10" />
                   </div>
                 ))}
               </div>
             ) : blockedUsers.length === 0 ? (
               <div className="py-8 text-center">
-                <Ban className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">Nenhum usuário bloqueado</p>
+                <Ban className="h-8 w-8 text-[#0A4D5C]/20 mx-auto mb-2" />
+                <p className="text-xs text-[#0A4D5C]/40">Nenhum usuário bloqueado</p>
               </div>
             ) : (
               <div className="space-y-0.5">
@@ -502,10 +496,10 @@ export function SettingsView() {
                   <div key={u.id} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
                     <UserAvatar user={{ id: u.id, display_name: u.display_name, avatar_url: u.avatar_url }} className="h-8 w-8" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{u.display_name}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">@{u.username}</div>
+                      <div className="text-sm font-medium truncate text-[#000305]">{u.display_name}</div>
+                      <div className="text-[11px] text-[#0A4D5C]/40 truncate">@{u.username}</div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => handleUnblock(u.id)} disabled={unblockingId === u.id} className="h-7 px-2.5 text-[11px]">
+                    <Button variant="outline" size="sm" onClick={() => handleUnblock(u.id)} disabled={unblockingId === u.id} className="h-7 px-2.5 text-[11px] border-[#0A4D5C]/10">
                       {unblockingId === u.id ? <Loader2 className="h-3 w-3.5 animate-spin" /> : "Desbloquear"}
                     </Button>
                   </div>
