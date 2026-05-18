@@ -35,6 +35,8 @@ import {
   Play,
   Pause,
   Send,
+  FileText,
+  PenSquare,
 } from "lucide-react";
 import { getInitials, getAvatarColor, timeAgo, BAIRROS } from "@/lib/constants";
 import { UserAvatar } from "./UserAvatar";
@@ -48,21 +50,21 @@ import {
 } from "@/lib/image-compression";
 
 // ═══════════════════════════════════════════════════════════
-// Post-it colors — SUAVES (pastel bem leve)
+// Post-it colors — TONS MÉDIOS (nem forte nem fraco)
 // ═══════════════════════════════════════════════════════════
 const POST_IT_COLORS = [
-  { bg: "#fffdf5", text: "#7a6c30", border: "#fef3c7", label: "Amarelo" },
-  { bg: "#fff5f6", text: "#8c3d45", border: "#fce7eb", label: "Rosa" },
-  { bg: "#f2f9ff", text: "#3a6d8c", border: "#dbeefe", label: "Azul" },
-  { bg: "#f2faf5", text: "#3a6b4a", border: "#d1f5df", label: "Verde" },
-  { bg: "#fff8f2", text: "#8c5a2a", border: "#fee8d1", label: "Laranja" },
-  { bg: "#f8f5ff", text: "#5e4a8c", border: "#e8e0fe", label: "Roxo" },
-  { bg: "#fff5f5", text: "#8c3a3a", border: "#fed7d7", label: "Coral" },
-  { bg: "#f0faf5", text: "#2a6b4a", border: "#c6f5e0", label: "Menta" },
-  { bg: "#f5f2ff", text: "#4a3d7a", border: "#ddd6fe", label: "Lavanda" },
-  { bg: "#fffbf0", text: "#7a5c20", border: "#fde68a", label: "Pêssego" },
-  { bg: "#ffffff", text: "#3a3a3a", border: "#e5e7eb", label: "Branco" },
-  { bg: "#f5f5f5", text: "#4a4a4a", border: "#d4d4d4", label: "Cinza" },
+  { bg: "#fef9c3", text: "#854d0e", border: "#fde68a", label: "Amarelo" },
+  { bg: "#fce7f3", text: "#9d174d", border: "#fbcfe8", label: "Rosa" },
+  { bg: "#dbeafe", text: "#1e40af", border: "#bfdbfe", label: "Azul" },
+  { bg: "#dcfce7", text: "#166534", border: "#bbf7d0", label: "Verde" },
+  { bg: "#ffedd5", text: "#9a3412", border: "#fed7aa", label: "Laranja" },
+  { bg: "#ede9fe", text: "#5b21b6", border: "#ddd6fe", label: "Roxo" },
+  { bg: "#fee2e2", text: "#991b1b", border: "#fecaca", label: "Coral" },
+  { bg: "#d1fae5", text: "#065f46", border: "#a7f3d0", label: "Menta" },
+  { bg: "#e0e7ff", text: "#3730a3", border: "#c7d2fe", label: "Lavanda" },
+  { bg: "#fef3c7", text: "#92400e", border: "#fde68a", label: "Pêssego" },
+  { bg: "#ffffff", text: "#374151", border: "#d1d5db", label: "Branco" },
+  { bg: "#f3f4f6", text: "#4b5563", border: "#d1d5db", label: "Cinza" },
 ] as const;
 
 // ═══════════════════════════════════════════════════════════
@@ -115,6 +117,9 @@ export function ProfileView() {
   const [uploading, setUploading] = useState(false);
   const [myPosts, setMyPosts] = useState<any[]>([]);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // ═══════ Tab state ═══════
+  const [activeTab, setActiveTab] = useState<"posts" | "postar">("posts");
 
   // ═══════ Composer state ═══════
   const [content, setContent] = useState("");
@@ -514,6 +519,7 @@ export function ProfileView() {
         clearMedia();
         toast.success("Post publicado!");
         fetchMyPosts();
+        setActiveTab("posts");
       } else if (data.error) {
         toast.error(data.error);
       }
@@ -527,7 +533,8 @@ export function ProfileView() {
   const selectedColor = POST_IT_COLORS[postStyle.postItColor ?? 0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* ═══════ CARD DO PERFIL ═══════ */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-start justify-between">
@@ -592,235 +599,335 @@ export function ProfileView() {
         </CardContent>
       </Card>
 
-      {/* ═══════ CAIXINHA DE POSTAR COM EDITOR — MOBILE-FRIENDLY ═══════ */}
-      <div className="rounded-2xl bg-[#eef1f3] p-3 sm:p-4 shadow-lg border border-[#0A4D5C]/8">
-        <div className="flex items-start gap-2.5 sm:gap-3">
-          <UserAvatar user={{ id: profile?.id || "", display_name: profile?.display_name || "?", avatar_url: profile?.avatar_url }} className="h-10 w-10 sm:h-12 sm:w-12 shrink-0" />
-          <div className="flex-1 min-w-0 space-y-2">
-            {/* Textarea com visualização de estilo */}
-            <div
-              className="rounded-xl border border-[#0A4D5C]/8 overflow-hidden transition-all"
-              style={{ backgroundColor: selectedColor.bg }}
-            >
-              <textarea
-                placeholder="Escreva algo bonito..."
-                value={content}
-                onChange={(e) => setContent(e.target.value.slice(0, 500))}
-                className="w-full min-h-[64px] resize-none border-0 bg-transparent p-2.5 text-sm focus:outline-none placeholder:opacity-40"
-                style={{
-                  color: selectedColor.text,
-                  fontFamily: postStyle.font ? `'${postStyle.font}', sans-serif` : undefined,
-                  fontWeight: postStyle.bold ? 700 : 400,
-                  fontStyle: postStyle.italic ? "italic" : "normal",
-                  textAlign: postStyle.alignment || "left",
-                }}
-                rows={2}
-              />
-            </div>
+      {/* ═══════ ABAS: Meus Posts / Postar ═══════ */}
+      <div className="flex rounded-xl bg-[#0A4D5C]/[0.06] p-1">
+        <button
+          onClick={() => setActiveTab("posts")}
+          className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${activeTab === "posts" ? "bg-[#f7f9fa] text-[#0A4D5C] shadow-sm" : "text-[#0A4D5C]/50 hover:text-[#0A4D5C]/70"}`}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Meus Posts
+        </button>
+        <button
+          onClick={() => setActiveTab("postar")}
+          className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${activeTab === "postar" ? "bg-[#f7f9fa] text-[#0A4D5C] shadow-sm" : "text-[#0A4D5C]/50 hover:text-[#0A4D5C]/70"}`}
+        >
+          <PenSquare className="h-3.5 w-3.5" />
+          Postar
+        </button>
+      </div>
 
-            {/* Photo previews */}
-            {hasPhotosInComposer && previewUrls.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap">
-                {previewUrls.map((url, i) => (
-                  <div key={i} className="relative group">
-                    <img src={url} alt={`Preview ${i + 1}`} className="h-14 w-14 rounded-lg object-cover shadow-sm border border-[#f7f9fa]" />
-                    <button onClick={() => removePhoto(i)} className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa] opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* ═══════ CONTEÚDO DAS ABAS ═══════ */}
+      {activeTab === "posts" ? (
+        <>
+          {/* Meus Posts */}
+          {myPosts.length > 0 ? (
+            <div className="space-y-2">
+              {myPosts.map((post: any) => {
+                const postStyleData: PostStyle | null = post.post_style;
+                const isTextOnly = !post.image_urls?.length && !post.video_url && !post.audio_url;
+                const colorIdx = postStyleData?.postItColor ?? 0;
+                const postItColor = isTextOnly ? POST_IT_COLORS[colorIdx >= 0 && colorIdx < POST_IT_COLORS.length ? colorIdx : 0] : POST_IT_COLORS[0];
+
+                return (
+                  <div
+                    key={post.id}
+                    className="rounded-xl p-3 transition-shadow hover:shadow-sm"
+                    style={{
+                      backgroundColor: isTextOnly ? postItColor.bg : "#f7f9fa",
+                      border: isTextOnly ? `1px solid ${postItColor.border}` : "1px solid rgba(10,77,92,0.08)",
+                      color: isTextOnly ? postItColor.text : "#000305",
+                    }}
+                  >
+                    <p
+                      className="text-sm whitespace-pre-wrap"
+                      style={{
+                        fontFamily: postStyleData?.font ? `'${postStyleData.font}', sans-serif` : isTextOnly ? "serif" : undefined,
+                        fontWeight: postStyleData?.bold ? 700 : undefined,
+                        fontStyle: postStyleData?.italic ? "italic" : undefined,
+                        textAlign: postStyleData?.alignment || undefined,
+                      }}
+                    >
+                      {post.content}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2" style={{ color: isTextOnly ? `${postItColor.text}80` : "rgba(1,56,106,0.4)" }}>
+                      <span className="text-[10px]">{timeAgo(post.created_at)}</span>
+                      {post.neighborhood && <span className="text-[10px]">· {post.neighborhood}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-10 w-10 text-[#0A4D5C]/15 mb-2" />
+              <p className="text-sm text-[#0A4D5C]/40">Nenhum post ainda</p>
+              <button onClick={() => setActiveTab("postar")} className="mt-2 text-xs font-semibold text-[#0A4D5C] hover:underline">
+                Criar primeiro post
+              </button>
+            </div>
+          )}
+
+          {/* Configurações */}
+          <Card className="cursor-pointer hover:bg-[#f7f75e]/10 transition-colors border-[#01386A]/8" onClick={() => setProfileSubView("settings")}>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f7f75e]/30">
+                    <Settings className="h-4 w-4 text-[#01386A]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#000305]">Configurações</p>
+                    <p className="text-xs text-[#01386A]/40">Privacidade, seguidores e permissões</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {unreadNotifications > 0 && (
+                    <Badge variant="default" className="h-5 min-w-5 px-1.5 text-[10px] flex items-center justify-center bg-[#01386A] text-[#f7f9fa]">{unreadNotifications}</Badge>
+                  )}
+                  <span className="text-[#01386A]/30 text-sm">›</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button variant="destructive" onClick={handleLogout} className="w-full gap-2">
+            <LogOut className="h-4 w-4" /> Sair da conta
+          </Button>
+        </>
+      ) : (
+        <>
+          {/* ═══════ ABA POSTAR — MINI EDITOR ═══════ */}
+          <div className="rounded-2xl bg-[#eef1f3] p-3 sm:p-4 shadow-lg border border-[#0A4D5C]/8">
+            <div className="flex items-start gap-2.5 sm:gap-3">
+              <UserAvatar user={{ id: profile?.id || "", display_name: profile?.display_name || "?", avatar_url: profile?.avatar_url }} className="h-10 w-10 sm:h-12 sm:w-12 shrink-0" />
+              <div className="flex-1 min-w-0 space-y-2">
+                {/* Textarea com visualização de estilo */}
+                <div
+                  className="rounded-xl border border-[#0A4D5C]/8 overflow-hidden transition-all"
+                  style={{ backgroundColor: selectedColor.bg }}
+                >
+                  <textarea
+                    placeholder="Escreva algo bonito..."
+                    value={content}
+                    onChange={(e) => setContent(e.target.value.slice(0, 500))}
+                    className="w-full min-h-[80px] resize-none border-0 bg-transparent p-2.5 text-sm focus:outline-none placeholder:opacity-40"
+                    style={{
+                      color: selectedColor.text,
+                      fontFamily: postStyle.font ? `'${postStyle.font}', sans-serif` : undefined,
+                      fontWeight: postStyle.bold ? 700 : 400,
+                      fontStyle: postStyle.italic ? "italic" : "normal",
+                      textAlign: postStyle.alignment || "left",
+                    }}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Photo previews */}
+                {hasPhotosInComposer && previewUrls.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {previewUrls.map((url, i) => (
+                      <div key={i} className="relative group">
+                        <img src={url} alt={`Preview ${i + 1}`} className="h-14 w-14 rounded-lg object-cover shadow-sm border border-[#f7f9fa]" />
+                        <button onClick={() => removePhoto(i)} className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa] opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Video preview */}
+                {hasVideoInComposer && videoPreview && (
+                  <div className="relative rounded-lg overflow-hidden">
+                    <video src={videoPreview} className="w-full max-h-32 object-cover" playsInline muted />
+                    <div className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full bg-[#f7f75e] px-1.5 py-0.5 text-[9px] font-semibold text-[#000305]">
+                      <Video className="h-2.5 w-2.5" /> {formatDuration(videoDuration)}
+                    </div>
+                    <button onClick={() => { setSelectedVideo(null); if (videoPreview) URL.revokeObjectURL(videoPreview); setVideoPreview(null); setVideoDuration(0); }} className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa]">
                       <X className="h-2.5 w-2.5" />
                     </button>
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            {/* Video preview */}
-            {hasVideoInComposer && videoPreview && (
-              <div className="relative rounded-lg overflow-hidden">
-                <video src={videoPreview} className="w-full max-h-32 object-cover" playsInline muted />
-                <div className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full bg-[#f7f75e] px-1.5 py-0.5 text-[9px] font-semibold text-[#000305]">
-                  <Video className="h-2.5 w-2.5" /> {formatDuration(videoDuration)}
-                </div>
-                <button onClick={() => { setSelectedVideo(null); if (videoPreview) URL.revokeObjectURL(videoPreview); setVideoPreview(null); setVideoDuration(0); }} className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa]">
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Audio preview */}
-            {hasAudioInComposer && audioPreview && (
-              <div className="relative rounded-lg bg-[#0A4D5C]/[0.06] p-2 border border-[#0A4D5C]/10">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa]">
-                    <Music className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-medium text-[#000305]">Áudio</span>
-                    <span className="text-[9px] text-[#0A4D5C]/40 ml-1.5">{formatDuration(audioDuration)}</span>
-                  </div>
-                </div>
-                <audio src={audioPreview} controls className="mt-1.5 w-full h-7" />
-                <button onClick={() => { setSelectedAudio(null); if (audioPreview) URL.revokeObjectURL(audioPreview); setAudioPreview(null); setAudioDuration(0); }} className="absolute top-1.5 right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa]">
-                  <X className="h-2 w-2" />
-                </button>
-              </div>
-            )}
-
-            {/* ═══════ TOOLBAR COMPACTA — 2 LINHAS ═══════ */}
-            <div className="space-y-1.5">
-              {/* Linha 1: Bold, Italic, Alinhamento, Fonte */}
-              <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
-                <button
-                  onClick={() => setPostStyle((s) => ({ ...s, bold: !s.bold }))}
-                  className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.bold ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                  title="Negrito"
-                >
-                  <Bold className="h-3 w-3" />
-                </button>
-
-                <button
-                  onClick={() => setPostStyle((s) => ({ ...s, italic: !s.italic }))}
-                  className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.italic ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                  title="Itálico"
-                >
-                  <Italic className="h-3 w-3" />
-                </button>
-
-                <div className="w-px h-4 bg-[#0A4D5C]/10 mx-0.5 shrink-0" />
-
-                {([
-                  { align: "left" as const, Icon: AlignLeft, label: "Esquerda" },
-                  { align: "center" as const, Icon: AlignCenter, label: "Centro" },
-                  { align: "right" as const, Icon: AlignRight, label: "Direita" },
-                  { align: "justify" as const, Icon: AlignJustify, label: "Justificar" },
-                ]).map(({ align, Icon, label }) => (
-                  <button
-                    key={align}
-                    onClick={() => setPostStyle((s) => ({ ...s, alignment: align }))}
-                    className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.alignment === align ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                    title={label}
-                  >
-                    <Icon className="h-3 w-3" />
-                  </button>
-                ))}
-
-                <div className="w-px h-4 bg-[#0A4D5C]/10 mx-0.5 shrink-0" />
-
-                {/* Fonte dropdown */}
-                <div className="relative shrink-0" ref={fontMenuRef}>
-                  <button
-                    onClick={() => setFontMenuOpen(!fontMenuOpen)}
-                    className={`flex items-center gap-0.5 rounded-md h-7 px-1.5 text-[10px] font-medium transition-colors ${fontMenuOpen ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                  >
-                    <Type className="h-3 w-3" />
-                    <span className="max-w-[44px] truncate">{postStyle.font || "Fonte"}</span>
-                    <ChevronDown className={`h-2.5 w-2.5 transition-transform ${fontMenuOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  {fontMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 z-50 w-36 rounded-xl bg-[#f7f9fa] p-1 shadow-lg border border-[#0A4D5C]/10 animate-in fade-in-0 zoom-in-95 max-h-[200px] overflow-y-auto">
-                      <button
-                        onClick={() => { setPostStyle((s) => ({ ...s, font: null })); setFontMenuOpen(false); }}
-                        className={`w-full text-left rounded-lg px-2.5 py-1.5 text-[11px] transition-colors ${!postStyle.font ? "bg-[#0A4D5C] text-[#f7f9fa]" : "text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                      >
-                        Padrão
-                      </button>
-                      {FONTS.map((f) => (
-                        <button
-                          key={f.value}
-                          onClick={() => { setPostStyle((s) => ({ ...s, font: f.value })); setFontMenuOpen(false); }}
-                          className={`w-full text-left rounded-lg px-2.5 py-1.5 text-[11px] transition-colors ${postStyle.font === f.value ? "bg-[#0A4D5C] text-[#f7f9fa]" : "text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                          style={{ fontFamily: `'${f.value}', sans-serif` }}
-                        >
-                          {f.name}
-                        </button>
-                      ))}
+                {/* Audio preview */}
+                {hasAudioInComposer && audioPreview && (
+                  <div className="relative rounded-lg bg-[#0A4D5C]/[0.06] p-2 border border-[#0A4D5C]/10">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa]">
+                        <Music className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-medium text-[#000305]">Áudio</span>
+                        <span className="text-[9px] text-[#0A4D5C]/40 ml-1.5">{formatDuration(audioDuration)}</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Linha 2: Cores do post-it (compacta, scroll horizontal) */}
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-                {POST_IT_COLORS.map((color, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPostStyle((s) => ({ ...s, postItColor: i }))}
-                    className={`h-5 w-5 rounded-full border-2 shrink-0 transition-all hover:scale-110 ${postStyle.postItColor === i ? "border-[#0A4D5C] scale-110 shadow-sm" : "border-[#0A4D5C]/10"}`}
-                    style={{ backgroundColor: color.bg }}
-                    title={color.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* ═══════ BARRA INFERIOR: Menu mídias + Contagem + Publicar ═══════ */}
-            <div className="flex items-center justify-between gap-1.5">
-              {/* Menu de mídias */}
-              <div className="relative" ref={mediaMenuRef}>
-                <button
-                  onClick={() => setMediaMenuOpen(!mediaMenuOpen)}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${mediaMenuOpen ? "bg-[#f7f75e] text-[#0A4D5C]" : "bg-[#f7f75e] text-[#0A4D5C] hover:bg-[#f7f75e]/80"}`}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Mídia</span>
-                  <ChevronDown className={`h-2.5 w-2.5 transition-transform ${mediaMenuOpen ? "rotate-180" : ""}`} />
-                </button>
-
-                {mediaMenuOpen && (
-                  <div className="absolute left-0 top-full mt-1 z-50 flex flex-col items-center gap-0.5 rounded-2xl bg-[#f7f9fa] p-1 shadow-lg border border-[#0A4D5C]/10 animate-in fade-in-0 zoom-in-95">
-                    <button onClick={() => { if (canAddPhotos) cameraPhotoRef.current?.click(); }} disabled={!canAddPhotos} title="Tirar foto" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddPhotos ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
-                      <Camera className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => { if (canAddPhotos) photoInputRef.current?.click(); }} disabled={!canAddPhotos} title="Galeria" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddPhotos ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
-                      <ImagePlus className="h-4 w-4" />
-                    </button>
-                    <div className="w-7 h-px bg-[#0A4D5C]/10" />
-                    <button onClick={() => { if (canAddVideo) cameraVideoRef.current?.click(); }} disabled={!canAddVideo} title="Gravar vídeo" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddVideo ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
-                      <Video className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => { if (canAddVideo) videoInputRef.current?.click(); }} disabled={!canAddVideo} title="Escolher vídeo" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddVideo ? "text-[#0A4D5C]/70 hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
-                      <Video className="h-4 w-4" />
-                    </button>
-                    <div className="w-7 h-px bg-[#0A4D5C]/10" />
-                    <button onClick={() => { if (canAddAudio && !isRecordingAudio) startAudioRecording(); }} disabled={!canAddAudio || isRecordingAudio} title="Gravar áudio" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddAudio && !isRecordingAudio ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
-                      <Mic className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => { if (canAddAudio) audioInputRef.current?.click(); }} disabled={!canAddAudio} title="Escolher áudio" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddAudio ? "text-[#0A4D5C]/70 hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
-                      <Music className="h-4 w-4" />
-                    </button>
-                    <div className="w-7 h-px bg-[#0A4D5C]/10" />
-                    <button onClick={() => setVisibility((v) => v === "public" ? "followers" : "public")} title={visibility === "public" ? "Público" : "Seguidores"} className="flex items-center justify-center rounded-full p-2 text-[#0A4D5C] transition-colors hover:bg-[#f7f75e]/30">
-                      {visibility === "public" ? <Globe className="h-4 w-4" /> : <UsersIcon className="h-4 w-4" />}
+                    <audio src={audioPreview} controls className="mt-1.5 w-full h-7" />
+                    <button onClick={() => { setSelectedAudio(null); if (audioPreview) URL.revokeObjectURL(audioPreview); setAudioPreview(null); setAudioDuration(0); }} className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa]">
+                      <X className="h-2 w-2" />
                     </button>
                   </div>
                 )}
 
-                {/* Hidden inputs */}
-                <input ref={cameraPhotoRef} type="file" accept="image/*" capture="environment" onChange={handleCameraPhoto} className="hidden" />
-                <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={handlePhotoSelect} className="hidden" />
-                <input ref={cameraVideoRef} type="file" accept="video/*" capture="environment" onChange={handleVideoSelect} className="hidden" />
-                <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideoSelect} className="hidden" />
-                <input ref={audioInputRef} type="file" accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,audio/x-m4a" onChange={handleAudioSelect} className="hidden" />
-              </div>
+                {/* ═══════ TOOLBAR COMPACTA — 2 LINHAS ═══════ */}
+                <div className="space-y-1.5">
+                  {/* Linha 1: Bold, Italic, Alinhamento, Fonte */}
+                  <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
+                    <button
+                      onClick={() => setPostStyle((s) => ({ ...s, bold: !s.bold }))}
+                      className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.bold ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                      title="Negrito"
+                    >
+                      <Bold className="h-3 w-3" />
+                    </button>
 
-              {/* Contagem + Publicar */}
-              <div className="flex items-center gap-1.5">
-                {content.trim().length > 0 && (
-                  <span className={`text-[9px] ${content.length > 450 ? "text-red-500" : "text-[#0A4D5C]/30"}`}>
-                    {content.length}/500
-                  </span>
-                )}
-                <button
-                  disabled={!canPost || publishing}
-                  onClick={handlePublish}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2EC4B6] text-[#f7f9fa] shadow-md hover:bg-[#25b0a3] active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
-                  title="Publicar"
-                >
-                  {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-sm">💬</span>}
-                </button>
+                    <button
+                      onClick={() => setPostStyle((s) => ({ ...s, italic: !s.italic }))}
+                      className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.italic ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                      title="Itálico"
+                    >
+                      <Italic className="h-3 w-3" />
+                    </button>
+
+                    <div className="w-px h-4 bg-[#0A4D5C]/10 mx-0.5 shrink-0" />
+
+                    {([
+                      { align: "left" as const, Icon: AlignLeft, label: "Esquerda" },
+                      { align: "center" as const, Icon: AlignCenter, label: "Centro" },
+                      { align: "right" as const, Icon: AlignRight, label: "Direita" },
+                      { align: "justify" as const, Icon: AlignJustify, label: "Justificar" },
+                    ]).map(({ align, Icon, label }) => (
+                      <button
+                        key={align}
+                        onClick={() => setPostStyle((s) => ({ ...s, alignment: align }))}
+                        className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.alignment === align ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                        title={label}
+                      >
+                        <Icon className="h-3 w-3" />
+                      </button>
+                    ))}
+
+                    <div className="w-px h-4 bg-[#0A4D5C]/10 mx-0.5 shrink-0" />
+
+                    {/* Fonte dropdown */}
+                    <div className="relative shrink-0" ref={fontMenuRef}>
+                      <button
+                        onClick={() => setFontMenuOpen(!fontMenuOpen)}
+                        className={`flex items-center gap-0.5 rounded-md h-7 px-1.5 text-[10px] font-medium transition-colors ${fontMenuOpen ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                      >
+                        <Type className="h-3 w-3" />
+                        <span className="max-w-[44px] truncate">{postStyle.font || "Fonte"}</span>
+                        <ChevronDown className={`h-2.5 w-2.5 transition-transform ${fontMenuOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      {fontMenuOpen && (
+                        <div className="absolute left-0 top-full mt-1 z-50 w-36 rounded-xl bg-[#f7f9fa] p-1 shadow-lg border border-[#0A4D5C]/10 animate-in fade-in-0 zoom-in-95 max-h-[200px] overflow-y-auto">
+                          <button
+                            onClick={() => { setPostStyle((s) => ({ ...s, font: null })); setFontMenuOpen(false); }}
+                            className={`w-full text-left rounded-lg px-2.5 py-1.5 text-[11px] transition-colors ${!postStyle.font ? "bg-[#0A4D5C] text-[#f7f9fa]" : "text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                          >
+                            Padrão
+                          </button>
+                          {FONTS.map((f) => (
+                            <button
+                              key={f.value}
+                              onClick={() => { setPostStyle((s) => ({ ...s, font: f.value })); setFontMenuOpen(false); }}
+                              className={`w-full text-left rounded-lg px-2.5 py-1.5 text-[11px] transition-colors ${postStyle.font === f.value ? "bg-[#0A4D5C] text-[#f7f9fa]" : "text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                              style={{ fontFamily: `'${f.value}', sans-serif` }}
+                            >
+                              {f.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Linha 2: Cores do post-it (compacta, scroll horizontal) */}
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                    {POST_IT_COLORS.map((color, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setPostStyle((s) => ({ ...s, postItColor: i }))}
+                        className={`h-5 w-5 rounded-full border-2 shrink-0 transition-all hover:scale-110 ${postStyle.postItColor === i ? "border-[#0A4D5C] scale-110 shadow-sm" : "border-[#0A4D5C]/10"}`}
+                        style={{ backgroundColor: color.bg }}
+                        title={color.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* ═══════ BARRA INFERIOR: Menu mídias + Contagem + Publicar ═══════ */}
+                <div className="flex items-center justify-between gap-1.5">
+                  {/* Menu de mídias */}
+                  <div className="relative" ref={mediaMenuRef}>
+                    <button
+                      onClick={() => setMediaMenuOpen(!mediaMenuOpen)}
+                      className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${mediaMenuOpen ? "bg-[#f7f75e] text-[#0A4D5C]" : "bg-[#f7f75e] text-[#0A4D5C] hover:bg-[#f7f75e]/80"}`}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Mídia</span>
+                      <ChevronDown className={`h-2.5 w-2.5 transition-transform ${mediaMenuOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {mediaMenuOpen && (
+                      <div className="absolute left-0 top-full mt-1 z-50 flex flex-col items-center gap-0.5 rounded-2xl bg-[#f7f9fa] p-1 shadow-lg border border-[#0A4D5C]/10 animate-in fade-in-0 zoom-in-95">
+                        <button onClick={() => { if (canAddPhotos) cameraPhotoRef.current?.click(); }} disabled={!canAddPhotos} title="Tirar foto" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddPhotos ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
+                          <Camera className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => { if (canAddPhotos) photoInputRef.current?.click(); }} disabled={!canAddPhotos} title="Galeria" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddPhotos ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
+                          <ImagePlus className="h-4 w-4" />
+                        </button>
+                        <div className="w-7 h-px bg-[#0A4D5C]/10" />
+                        <button onClick={() => { if (canAddVideo) cameraVideoRef.current?.click(); }} disabled={!canAddVideo} title="Gravar vídeo" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddVideo ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
+                          <Video className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => { if (canAddVideo) videoInputRef.current?.click(); }} disabled={!canAddVideo} title="Escolher vídeo" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddVideo ? "text-[#0A4D5C]/70 hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
+                          <Video className="h-4 w-4" />
+                        </button>
+                        <div className="w-7 h-px bg-[#0A4D5C]/10" />
+                        <button onClick={() => { if (canAddAudio && !isRecordingAudio) startAudioRecording(); }} disabled={!canAddAudio || isRecordingAudio} title="Gravar áudio" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddAudio && !isRecordingAudio ? "text-[#0A4D5C] hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
+                          <Mic className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => { if (canAddAudio) audioInputRef.current?.click(); }} disabled={!canAddAudio} title="Escolher áudio" className={`flex items-center justify-center rounded-full p-2 transition-colors ${canAddAudio ? "text-[#0A4D5C]/70 hover:bg-[#f7f75e]/30" : "text-[#0A4D5C]/25 cursor-not-allowed"}`}>
+                          <Music className="h-4 w-4" />
+                        </button>
+                        <div className="w-7 h-px bg-[#0A4D5C]/10" />
+                        <button onClick={() => setVisibility((v) => v === "public" ? "followers" : "public")} title={visibility === "public" ? "Público" : "Seguidores"} className="flex items-center justify-center rounded-full p-2 text-[#0A4D5C] transition-colors hover:bg-[#f7f75e]/30">
+                          {visibility === "public" ? <Globe className="h-4 w-4" /> : <UsersIcon className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Hidden inputs */}
+                    <input ref={cameraPhotoRef} type="file" accept="image/*" capture="environment" onChange={handleCameraPhoto} className="hidden" />
+                    <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={handlePhotoSelect} className="hidden" />
+                    <input ref={cameraVideoRef} type="file" accept="video/*" capture="environment" onChange={handleVideoSelect} className="hidden" />
+                    <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideoSelect} className="hidden" />
+                    <input ref={audioInputRef} type="file" accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,audio/x-m4a" onChange={handleAudioSelect} className="hidden" />
+                  </div>
+
+                  {/* Contagem + Publicar */}
+                  <div className="flex items-center gap-1.5">
+                    {content.trim().length > 0 && (
+                      <span className={`text-[9px] ${content.length > 450 ? "text-red-500" : "text-[#0A4D5C]/30"}`}>
+                        {content.length}/500
+                      </span>
+                    )}
+                    <button
+                      disabled={!canPost || publishing}
+                      onClick={handlePublish}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2EC4B6] text-[#f7f9fa] shadow-md hover:bg-[#25b0a3] active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
+                      title="Publicar"
+                    >
+                      {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-sm">💬</span>}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Recording overlay */}
       {isRecordingAudio && (
@@ -850,76 +957,6 @@ export function ProfileView() {
           </div>
         </div>
       )}
-
-      {/* Configurações */}
-      <Card className="cursor-pointer hover:bg-[#f7f75e]/10 transition-colors border-[#01386A]/8" onClick={() => setProfileSubView("settings")}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f7f75e]/30">
-                <Settings className="h-4 w-4 text-[#01386A]" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[#000305]">Configurações</p>
-                <p className="text-xs text-[#01386A]/40">Privacidade, seguidores e permissões</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {unreadNotifications > 0 && (
-                <Badge variant="default" className="h-5 min-w-5 px-1.5 text-[10px] flex items-center justify-center bg-[#01386A] text-[#f7f9fa]">{unreadNotifications}</Badge>
-              )}
-              <span className="text-[#01386A]/30 text-sm">›</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Meus Posts */}
-      {myPosts.length > 0 && (
-        <div>
-          <h3 className="mb-3 text-sm font-semibold text-[#000305]">Meus posts</h3>
-          <div className="space-y-2">
-            {myPosts.map((post: any) => {
-              const postStyleData: PostStyle | null = post.post_style;
-              const isTextOnly = !post.image_urls?.length && !post.video_url && !post.audio_url;
-              const colorIdx = postStyleData?.postItColor ?? 0;
-              const postItColor = isTextOnly ? POST_IT_COLORS[colorIdx >= 0 && colorIdx < POST_IT_COLORS.length ? colorIdx : 0] : POST_IT_COLORS[0];
-
-              return (
-                <div
-                  key={post.id}
-                  className="rounded-lg p-3 transition-shadow hover:shadow-sm"
-                  style={{
-                    backgroundColor: isTextOnly ? postItColor.bg : "#f7f9fa",
-                    border: isTextOnly ? `1px solid ${postItColor.border}` : "1px solid rgba(10,77,92,0.08)",
-                    color: isTextOnly ? postItColor.text : "#000305",
-                  }}
-                >
-                  <p
-                    className="text-sm whitespace-pre-wrap"
-                    style={{
-                      fontFamily: postStyleData?.font ? `'${postStyleData.font}', sans-serif` : isTextOnly ? "serif" : undefined,
-                      fontWeight: postStyleData?.bold ? 700 : undefined,
-                      fontStyle: postStyleData?.italic ? "italic" : undefined,
-                      textAlign: postStyleData?.alignment || undefined,
-                    }}
-                  >
-                    {post.content}
-                  </p>
-                  <div className="mt-1 flex items-center gap-2" style={{ color: isTextOnly ? `${postItColor.text}80` : "rgba(1,56,106,0.4)" }}>
-                    <span className="text-[10px]">{timeAgo(post.created_at)}</span>
-                    {post.neighborhood && <span className="text-[10px]">· {post.neighborhood}</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <Button variant="destructive" onClick={handleLogout} className="w-full gap-2">
-        <LogOut className="h-4 w-4" /> Sair da conta
-      </Button>
     </div>
   );
 }
