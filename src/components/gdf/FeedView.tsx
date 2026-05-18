@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useStore, Profile } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +107,79 @@ const POST_IT_COLORS_HEX = [
 
 // Fontes disponíveis para post_style
 const EDITOR_FONTS = ["Nunito", "Quicksand", "Poppins", "Inter", "Comfortaa", "Montserrat", "Lato", "Raleway", "DM Sans", "Work Sans"] as const;
+
+// ═══════════════════════════════════════════════════════════
+// FormattedText — parseia **bold**, _italic_, # H1, ## H2
+// ═══════════════════════════════════════════════════════════
+function parseInlineFormatting(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|_(.+?)_)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<Fragment key={`t${key++}`}>{text.slice(lastIndex, match.index)}</Fragment>);
+    }
+    if (match[2]) {
+      parts.push(<strong key={`bi${key++}`}><em>{match[2]}</em></strong>);
+    } else if (match[3]) {
+      parts.push(<strong key={`b${key++}`}>{match[3]}</strong>);
+    } else if (match[4]) {
+      parts.push(<em key={`i${key++}`}>{match[4]}</em>);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(<Fragment key={`r${key++}`}>{text.slice(lastIndex)}</Fragment>);
+  }
+
+  return parts.length > 0 ? parts : [<Fragment key="empty">{text}</Fragment>];
+}
+
+function FormattedText({
+  content,
+  className,
+  style,
+}: {
+  content: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const lines = content.split("\n");
+
+  return (
+    <div className={className} style={style}>
+      {lines.map((line, i) => {
+        let headingLevel = 0;
+        let text = line;
+        if (text.startsWith("### ")) { headingLevel = 3; text = text.slice(4); }
+        else if (text.startsWith("## ")) { headingLevel = 2; text = text.slice(3); }
+        else if (text.startsWith("# ")) { headingLevel = 1; text = text.slice(2); }
+
+        const headingStyle: React.CSSProperties =
+          headingLevel > 0
+            ? {
+                fontSize: headingLevel === 1 ? "1.25rem" : headingLevel === 2 ? "1.1rem" : "1rem",
+                fontWeight: 700,
+                lineHeight: 1.3,
+                display: "block",
+                marginTop: i > 0 ? "0.35em" : undefined,
+              }
+            : {};
+
+        return (
+          <Fragment key={i}>
+            {i > 0 && <br />}
+            <span style={headingStyle}>{parseInlineFormatting(text)}</span>
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
 
 function getPostItColor(postId: string) {
   let hash = 0;
@@ -1505,8 +1578,9 @@ function PostThread({
 
             {/* Content */}
             {isTextOnly ? (
-              <p
+              <FormattedText
                 className={`mt-1.5 text-base sm:text-lg leading-snug whitespace-pre-wrap ${useInlineStyle ? "" : (postItColor?.text || "text-[#000305]")}`}
+                content={post.content}
                 style={{
                   fontFamily: hasPostStyle && post.post_style!.font ? `'${post.post_style!.font}', sans-serif` : "serif",
                   fontWeight: hasPostStyle && post.post_style!.bold ? 700 : undefined,
@@ -1514,10 +1588,13 @@ function PostThread({
                   textAlign: hasPostStyle && post.post_style!.alignment ? post.post_style!.alignment : undefined,
                   color: useInlineStyle && postItColorHex ? postItColorHex.text : undefined,
                 }}
-              >{post.content}</p>
+              />
             ) : (
-              <p className="mt-1.5 text-[13px] sm:text-sm leading-relaxed whitespace-pre-wrap text-[#000305]">{post.content}</p>
-            )}
+              <FormattedText
+                className="mt-1.5 text-[13px] sm:text-sm leading-relaxed whitespace-pre-wrap text-[#000305]"
+                content={post.content}
+              />
+            )
 
             {/* Shared post (repost) */}
             {post.shared_post && (

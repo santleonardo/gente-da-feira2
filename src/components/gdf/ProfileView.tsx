@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +104,92 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// ═══════════════════════════════════════════════════════════
+// FormattedText — parseia **bold**, _italic_, # H1, ## H2
+// ═══════════════════════════════════════════════════════════
+function parseInlineFormatting(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  // Match ***bold+italic***, **bold**, _italic_ (order matters: triple first)
+  const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|_(.+?)_)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<Fragment key={`t${key++}`}>{text.slice(lastIndex, match.index)}</Fragment>);
+    }
+    if (match[2]) {
+      // ***bold+italic***
+      parts.push(<strong key={`bi${key++}`}><em>{match[2]}</em></strong>);
+    } else if (match[3]) {
+      // **bold**
+      parts.push(<strong key={`b${key++}`}>{match[3]}</strong>);
+    } else if (match[4]) {
+      // _italic_
+      parts.push(<em key={`i${key++}`}>{match[4]}</em>);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(<Fragment key={`r${key++}`}>{text.slice(lastIndex)}</Fragment>);
+  }
+
+  return parts.length > 0 ? parts : [<Fragment key="empty">{text}</Fragment>];
+}
+
+function FormattedText({
+  content,
+  className,
+  style,
+}: {
+  content: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const lines = content.split("\n");
+
+  return (
+    <div className={className} style={style}>
+      {lines.map((line, i) => {
+        // Detectar heading
+        let headingLevel = 0;
+        let text = line;
+        if (text.startsWith("### ")) {
+          headingLevel = 3;
+          text = text.slice(4);
+        } else if (text.startsWith("## ")) {
+          headingLevel = 2;
+          text = text.slice(3);
+        } else if (text.startsWith("# ")) {
+          headingLevel = 1;
+          text = text.slice(2);
+        }
+
+        // Tamanhos adaptados ao celular (não tão grandes)
+        const headingStyle: React.CSSProperties =
+          headingLevel > 0
+            ? {
+                fontSize: headingLevel === 1 ? "1.25rem" : headingLevel === 2 ? "1.1rem" : "1rem",
+                fontWeight: 700,
+                lineHeight: 1.3,
+                display: "block",
+                marginTop: i > 0 ? "0.35em" : undefined,
+              }
+            : {};
+
+        return (
+          <Fragment key={i}>
+            {i > 0 && <br />}
+            <span style={headingStyle}>{parseInlineFormatting(text)}</span>
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ProfileView() {
   const { profile, logout, updateProfile, setProfileSubView, unreadNotifications } = useStore();
   const [editing, setEditing] = useState(false);
@@ -133,6 +219,7 @@ export function ProfileView() {
   const [publishing, setPublishing] = useState(false);
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
   const fontMenuRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Media state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -172,6 +259,71 @@ export function ProfileView() {
   const canAddPhotos = !hasVideoInComposer && !hasAudioInComposer && selectedFiles.length < MAX_PHOTOS_PER_POST;
   const canAddVideo = !hasPhotosInComposer && !hasAudioInComposer && !hasVideoInComposer;
   const canAddAudio = !hasPhotosInComposer && !hasVideoInComposer && !hasAudioInComposer;
+
+  // ═══════ Inline formatting helpers ═══════
+  const wrapSelection = (before: string, after: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = content.slice(start, end);
+
+    if (selected.length > 0) {
+      // Verificar se o texto já está envolvido com os marcadores
+      const beforeText = content.slice(start - before.length, start);
+      const afterText = content.slice(end, end + after.length);
+      if (beforeText === before && afterText === after) {
+        // Remover marcadores existentes
+        const newContent = content.slice(0, start - before.length) + selected + content.slice(end + after.length);
+        setContent(newContent.slice(0, 500));
+        setTimeout(() => {
+          ta.selectionStart = start - before.length;
+          ta.selectionEnd = start - before.length + selected.length;
+          ta.focus();
+        }, 0);
+      } else {
+        // Adicionar marcadores
+        const newContent = content.slice(0, start) + before + selected + after + content.slice(end);
+        setContent(newContent.slice(0, 500));
+        setTimeout(() => {
+          ta.selectionStart = start + before.length;
+          ta.selectionEnd = end + before.length;
+          ta.focus();
+        }, 0);
+      }
+    } else {
+      // Sem seleção: toggle global
+      if (before === "**") {
+        setPostStyle((s) => ({ ...s, bold: !s.bold }));
+      } else if (before === "_") {
+        setPostStyle((s) => ({ ...s, italic: !s.italic }));
+      }
+    }
+  };
+
+  const toggleLinePrefix = (prefix: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const cursorPos = ta.selectionStart;
+
+    // Encontrar início da linha atual
+    const lineStart = content.lastIndexOf("\n", cursorPos - 1) + 1;
+    const lineEnd = content.indexOf("\n", cursorPos);
+    const actualEnd = lineEnd === -1 ? content.length : lineEnd;
+    const currentLine = content.slice(lineStart, actualEnd);
+
+    // Remover prefixo de heading existente
+    let cleanLine = currentLine;
+    if (currentLine.startsWith("### ")) cleanLine = currentLine.slice(4);
+    else if (currentLine.startsWith("## ")) cleanLine = currentLine.slice(3);
+    else if (currentLine.startsWith("# ")) cleanLine = currentLine.slice(2);
+
+    // Adicionar o prefixo solicitado
+    const newLine = prefix + cleanLine;
+    const newContent = content.slice(0, lineStart) + newLine + content.slice(actualEnd);
+    setContent(newContent.slice(0, 500));
+    setTimeout(() => ta.focus(), 0);
+  };
 
   // Carregar Google Fonts
   useEffect(() => {
@@ -639,17 +791,16 @@ export function ProfileView() {
                       color: isTextOnly ? postItColor.text : "#000305",
                     }}
                   >
-                    <p
+                    <FormattedText
                       className="text-sm whitespace-pre-wrap"
+                      content={post.content}
                       style={{
                         fontFamily: postStyleData?.font ? `'${postStyleData.font}', sans-serif` : isTextOnly ? "serif" : undefined,
                         fontWeight: postStyleData?.bold ? 700 : undefined,
                         fontStyle: postStyleData?.italic ? "italic" : undefined,
                         textAlign: postStyleData?.alignment || undefined,
                       }}
-                    >
-                      {post.content}
-                    </p>
+                    />
                     <div className="mt-1 flex items-center gap-2" style={{ color: isTextOnly ? `${postItColor.text}80` : "rgba(1,56,106,0.4)" }}>
                       <span className="text-[10px]">{timeAgo(post.created_at)}</span>
                       {post.neighborhood && <span className="text-[10px]">· {post.neighborhood}</span>}
@@ -697,18 +848,19 @@ export function ProfileView() {
         </>
       ) : (
         <>
-          {/* ═══════ ABA POSTAR — MINI EDITOR VERTICAL COMPACTO ═══════ */}
-          <div className="rounded-2xl bg-[#eef1f3] p-2.5 shadow-lg border border-[#0A4D5C]/8">
+          {/* ═══════ ABA POSTAR — MINI EDITOR COMPLETO ═══════ */}
+          <div className="rounded-2xl bg-[#eef1f3] p-3 shadow-lg border border-[#0A4D5C]/8">
             {/* Textarea com visualização de estilo */}
             <div
               className="rounded-xl border border-[#0A4D5C]/8 overflow-hidden transition-all"
               style={{ backgroundColor: selectedColor.bg }}
             >
               <textarea
-                placeholder="Escreva algo bonito..."
+                ref={textareaRef}
+                placeholder="Escreva algo bonito... Selecione texto e use B/I para formatar"
                 value={content}
                 onChange={(e) => setContent(e.target.value.slice(0, 500))}
-                className="w-full min-h-[52px] resize-none border-0 bg-transparent px-2.5 py-2 text-sm focus:outline-none placeholder:opacity-40"
+                className="w-full min-h-[100px] resize-none border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none placeholder:opacity-40"
                 style={{
                   color: selectedColor.text,
                   fontFamily: postStyle.font ? `'${postStyle.font}', sans-serif` : undefined,
@@ -716,13 +868,13 @@ export function ProfileView() {
                   fontStyle: postStyle.italic ? "italic" : "normal",
                   textAlign: postStyle.alignment || "left",
                 }}
-                rows={2}
+                rows={4}
               />
             </div>
 
             {/* Media previews */}
             {hasPhotosInComposer && previewUrls.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap mt-1.5">
+              <div className="flex gap-1.5 flex-wrap mt-2">
                 {previewUrls.map((url, i) => (
                   <div key={i} className="relative group">
                     <img src={url} alt={`Preview ${i + 1}`} className="h-12 w-12 rounded-lg object-cover shadow-sm border border-[#f7f9fa]" />
@@ -735,7 +887,7 @@ export function ProfileView() {
             )}
 
             {hasVideoInComposer && videoPreview && (
-              <div className="relative rounded-lg overflow-hidden mt-1.5">
+              <div className="relative rounded-lg overflow-hidden mt-2">
                 <video src={videoPreview} className="w-full max-h-24 object-cover" playsInline muted />
                 <div className="absolute top-1 left-1 flex items-center gap-1 rounded-full bg-[#f7f75e] px-1.5 py-0.5 text-[9px] font-semibold text-[#000305]">
                   <Video className="h-2.5 w-2.5" /> {formatDuration(videoDuration)}
@@ -747,7 +899,7 @@ export function ProfileView() {
             )}
 
             {hasAudioInComposer && audioPreview && (
-              <div className="relative rounded-lg bg-[#0A4D5C]/[0.06] p-1.5 border border-[#0A4D5C]/10 mt-1.5">
+              <div className="relative rounded-lg bg-[#0A4D5C]/[0.06] p-1.5 border border-[#0A4D5C]/10 mt-2">
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0A4D5C] text-[#f7f9fa]">
                     <Music className="h-3 w-3" />
@@ -764,52 +916,74 @@ export function ProfileView() {
               </div>
             )}
 
-            {/* ═══════ TOOLBAR — LINHA ÚNICA DE FORMATO ═══════ */}
-            <div className="flex items-center gap-px mt-1.5 flex-wrap">
+            {/* ═══════ TOOLBAR — LINHA 1: FORMATAÇÃO ═══════ */}
+            <div className="flex items-center gap-1 mt-2 flex-wrap">
+              {/* Negrito — seleciona texto e aplica **...** */}
               <button
-                onClick={() => setPostStyle((s) => ({ ...s, bold: !s.bold }))}
-                className={`flex items-center justify-center rounded-md h-6 w-6 shrink-0 transition-colors ${postStyle.bold ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                title="Negrito"
+                onClick={() => wrapSelection("**", "**")}
+                className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.bold ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                title="Negrito (selecione o texto)"
               >
-                <Bold className="h-3 w-3" />
+                <Bold className="h-3.5 w-3.5" />
               </button>
+              {/* Itálico — seleciona texto e aplica _..._ */}
               <button
-                onClick={() => setPostStyle((s) => ({ ...s, italic: !s.italic }))}
-                className={`flex items-center justify-center rounded-md h-6 w-6 shrink-0 transition-colors ${postStyle.italic ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                title="Itálico"
+                onClick={() => wrapSelection("_", "_")}
+                className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.italic ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                title="Itálico (selecione o texto)"
               >
-                <Italic className="h-3 w-3" />
+                <Italic className="h-3.5 w-3.5" />
               </button>
 
-              <div className="w-px h-3.5 bg-[#0A4D5C]/10 mx-0.5 shrink-0" />
+              <div className="w-px h-4 bg-[#0A4D5C]/10 shrink-0" />
 
+              {/* H1 — adiciona # no início da linha */}
+              <button
+                onClick={() => toggleLinePrefix("# ")}
+                className="flex items-center justify-center rounded-md h-7 px-1.5 shrink-0 text-[10px] font-bold transition-colors bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"
+                title="Título H1"
+              >
+                H1
+              </button>
+              {/* H2 — adiciona ## no início da linha */}
+              <button
+                onClick={() => toggleLinePrefix("## ")}
+                className="flex items-center justify-center rounded-md h-7 px-1.5 shrink-0 text-[10px] font-bold transition-colors bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"
+                title="Título H2"
+              >
+                H2
+              </button>
+
+              <div className="w-px h-4 bg-[#0A4D5C]/10 shrink-0" />
+
+              {/* Alinhamento */}
               {([
-                { align: "left" as const, Icon: AlignLeft, label: "Esq" },
-                { align: "center" as const, Icon: AlignCenter, label: "Centro" },
-                { align: "right" as const, Icon: AlignRight, label: "Dir" },
-                { align: "justify" as const, Icon: AlignJustify, label: "Just" },
+                { align: "left" as const, Icon: AlignLeft },
+                { align: "center" as const, Icon: AlignCenter },
+                { align: "right" as const, Icon: AlignRight },
+                { align: "justify" as const, Icon: AlignJustify },
               ]).map(({ align, Icon }) => (
                 <button
                   key={align}
                   onClick={() => setPostStyle((s) => ({ ...s, alignment: align }))}
-                  className={`flex items-center justify-center rounded-md h-6 w-6 shrink-0 transition-colors ${postStyle.alignment === align ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                  className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.alignment === align ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
                   title={align}
                 >
-                  <Icon className="h-3 w-3" />
+                  <Icon className="h-3.5 w-3.5" />
                 </button>
               ))}
 
-              <div className="w-px h-3.5 bg-[#0A4D5C]/10 mx-0.5 shrink-0" />
+              <div className="w-px h-4 bg-[#0A4D5C]/10 shrink-0" />
 
               {/* Fonte dropdown */}
               <div className="relative shrink-0" ref={fontMenuRef}>
                 <button
                   onClick={() => setFontMenuOpen(!fontMenuOpen)}
-                  className={`flex items-center gap-0.5 rounded-md h-6 px-1 text-[9px] font-medium transition-colors ${fontMenuOpen ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                  className={`flex items-center gap-0.5 rounded-md h-7 px-1.5 text-[9px] font-medium transition-colors ${fontMenuOpen ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
                 >
-                  <Type className="h-2.5 w-2.5" />
+                  <Type className="h-3 w-3" />
                   <span className="max-w-[36px] truncate">{postStyle.font || "Fonte"}</span>
-                  <ChevronDown className={`h-2 w-2 transition-transform ${fontMenuOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-2.5 w-2.5 transition-transform ${fontMenuOpen ? "rotate-180" : ""}`} />
                 </button>
                 {fontMenuOpen && (
                   <div className="absolute left-0 top-full mt-1 z-50 w-36 rounded-xl bg-[#f7f9fa] p-1 shadow-lg border border-[#0A4D5C]/10 animate-in fade-in-0 zoom-in-95 max-h-[180px] overflow-y-auto">
@@ -833,17 +1007,17 @@ export function ProfileView() {
                 )}
               </div>
 
-              {/* Espaçador flex */}
+              {/* Espaçador */}
               <div className="flex-1" />
 
-              {/* Menu de mídias (inline) */}
+              {/* Menu de mídias */}
               <div className="relative" ref={mediaMenuRef}>
                 <button
                   onClick={() => setMediaMenuOpen(!mediaMenuOpen)}
-                  className={`flex items-center justify-center rounded-md h-6 w-6 transition-colors ${mediaMenuOpen ? "bg-[#f7f75e] text-[#0A4D5C]" : "bg-[#f7f75e]/60 text-[#0A4D5C] hover:bg-[#f7f75e]"}`}
+                  className={`flex items-center justify-center rounded-md h-7 w-7 transition-colors ${mediaMenuOpen ? "bg-[#f7f75e] text-[#0A4D5C]" : "bg-[#f7f75e]/60 text-[#0A4D5C] hover:bg-[#f7f75e]"}`}
                   title="Mídia"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3.5 w-3.5" />
                 </button>
 
                 {mediaMenuOpen && (
@@ -882,19 +1056,38 @@ export function ProfileView() {
                 <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideoSelect} className="hidden" />
                 <input ref={audioInputRef} type="file" accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,audio/x-m4a" onChange={handleAudioSelect} className="hidden" />
               </div>
+            </div>
 
-              {/* Visibilidade inline */}
+            {/* ═══════ CORES — GRID 2 LINHAS × 6 ═══════ */}
+            <div className="grid grid-cols-6 gap-1 mt-2">
+              {POST_IT_COLORS.map((color, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPostStyle((s) => ({ ...s, postItColor: i }))}
+                  className={`h-6 rounded-full border-2 transition-all hover:scale-105 ${postStyle.postItColor === i ? "border-[#0A4D5C] scale-105 shadow-sm" : "border-[#0A4D5C]/10"}`}
+                  style={{ backgroundColor: color.bg }}
+                  title={color.label}
+                />
+              ))}
+            </div>
+
+            {/* ═══════ AÇÃO: VISIBILIDADE + CONTAGEM + PUBLICAR ═══════ */}
+            <div className="flex items-center gap-2 mt-2">
+              {/* Visibilidade */}
               <button
                 onClick={() => setVisibility((v) => v === "public" ? "followers" : "public")}
-                className={`flex items-center justify-center rounded-md h-6 w-6 transition-colors ${visibility === "followers" ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                className={`flex items-center gap-1 rounded-md h-7 px-2 text-[9px] font-medium transition-colors ${visibility === "followers" ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
                 title={visibility === "public" ? "Público" : "Seguidores"}
               >
                 {visibility === "public" ? <Globe className="h-3 w-3" /> : <UsersIcon className="h-3 w-3" />}
+                {visibility === "public" ? "Público" : "Seguidores"}
               </button>
+
+              <div className="flex-1" />
 
               {/* Contagem */}
               {content.trim().length > 0 && (
-                <span className={`text-[8px] shrink-0 ${content.length > 450 ? "text-red-500" : "text-[#0A4D5C]/30"}`}>
+                <span className={`text-[9px] shrink-0 ${content.length > 450 ? "text-red-500" : "text-[#0A4D5C]/30"}`}>
                   {content.length}/500
                 </span>
               )}
@@ -903,24 +1096,12 @@ export function ProfileView() {
               <button
                 disabled={!canPost || publishing}
                 onClick={handlePublish}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2EC4B6] text-[#f7f9fa] shadow-md hover:bg-[#25b0a3] active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100 shrink-0"
+                className="flex h-8 items-center gap-1.5 rounded-full bg-[#2EC4B6] text-[#f7f9fa] px-4 shadow-md hover:bg-[#25b0a3] active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100 shrink-0 text-xs font-semibold"
                 title="Publicar"
               >
-                {publishing ? <Loader2 className="h-3 w-3 animate-spin" /> : <span className="text-xs">💬</span>}
+                {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                Publicar
               </button>
-            </div>
-
-            {/* ═══════ CORES — GRID 2 LINHAS × 6 ═══════ */}
-            <div className="grid grid-cols-6 gap-1 mt-1.5">
-              {POST_IT_COLORS.map((color, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPostStyle((s) => ({ ...s, postItColor: i }))}
-                  className={`h-5 rounded-full border-2 transition-all hover:scale-105 ${postStyle.postItColor === i ? "border-[#0A4D5C] scale-105 shadow-sm" : "border-[#0A4D5C]/10"}`}
-                  style={{ backgroundColor: color.bg }}
-                  title={color.label}
-                />
-              ))}
             </div>
           </div>
         </>
