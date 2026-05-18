@@ -75,17 +75,34 @@ const REACTION_EMOJIS = [
 // Post-it colors for text-only posts (suaves/pastel)
 // ═══════════════════════════════════════════════════════════
 const POST_IT_COLORS = [
-  { bg: "bg-[#fefce8]", text: "text-[#713f12]", border: "border-[#fef08a]", font: "'Nunito', sans-serif" },           // Amarelo
-  { bg: "bg-[#fef1f2]", text: "text-[#9f1239]", border: "border-[#fecdd3]", font: "'Quicksand', sans-serif" },        // Rosa
-  { bg: "bg-[#f0f9ff]", text: "text-[#0c4a6e]", border: "border-[#bae6fd]", font: "'Poppins', sans-serif" },          // Azul
-  { bg: "bg-[#f0fdf4]", text: "text-[#14532d]", border: "border-[#86efac]", font: "'Inter', sans-serif" },             // Verde
-  { bg: "bg-[#fff7ed]", text: "text-[#7c2d12]", border: "border-[#fdba74]", font: "'Comfortaa', sans-serif" },        // Laranja
-  { bg: "bg-[#faf5ff]", text: "text-[#581c87]", border: "border-[#d8b4fe]", font: "'Montserrat', sans-serif" },       // Roxo
-  { bg: "bg-[#fff5f5]", text: "text-[#7f1d1d]", border: "border-[#fecaca]", font: "'Lato', sans-serif" },              // Coral
-  { bg: "bg-[#ecfdf5]", text: "text-[#064e3b]", border: "border-[#6ee7b7]", font: "'Raleway', sans-serif" },           // Menta
-  { bg: "bg-[#f5f3ff]", text: "text-[#3b0764]", border: "border-[#c4b5fd]", font: "'DM Sans', sans-serif" },           // Lavanda
-  { bg: "bg-[#fffbeb]", text: "text-[#78350f]", border: "border-[#fde68a]", font: "'Work Sans', sans-serif" },         // Pêssego
+  { bg: "bg-[#fef9c3]", text: "text-[#5c4f1e]", border: "border-[#fde68a]" },       // Amarelo
+  { bg: "bg-[#fecdd3]", text: "text-[#7c2d35]", border: "border-[#fda4af]" },        // Rosa
+  { bg: "bg-[#bae6fd]", text: "text-[#1e5070]", border: "border-[#7dd3fc]" },        // Azul
+  { bg: "bg-[#bbf7d0]", text: "text-[#2d5a3a]", border: "border-[#86efac]" },        // Verde
+  { bg: "bg-[#fed7aa]", text: "text-[#6b3a15]", border: "border-[#fdba74]" },        // Laranja
+  { bg: "bg-[#ddd6fe]", text: "text-[#4a3580]", border: "border-[#c4b5fd]" },        // Roxo
+  { bg: "bg-[#fecaca]", text: "text-[#6b2020]", border: "border-[#fca5a5]" },        // Coral
+  { bg: "bg-[#a7f3d0]", text: "text-[#1a5a3a]", border: "border-[#6ee7b7]" },        // Menta
+  { bg: "bg-[#c4b5fd]", text: "text-[#3b2d70]", border: "border-[#a78bfa]" },        // Lavanda
+  { bg: "bg-[#fde68a]", text: "text-[#6b4e10]", border: "border-[#fbbf24]" },        // Pêssego
 ] as const;
+
+// Cores em hex para uso com inline styles (post_style)
+const POST_IT_COLORS_HEX = [
+  { bg: "#fef9c3", text: "#5c4f1e", border: "#fde68a" },       // Amarelo
+  { bg: "#fecdd3", text: "#7c2d35", border: "#fda4af" },        // Rosa
+  { bg: "#bae6fd", text: "#1e5070", border: "#7dd3fc" },        // Azul
+  { bg: "#bbf7d0", text: "#2d5a3a", border: "#86efac" },        // Verde
+  { bg: "#fed7aa", text: "#6b3a15", border: "#fdba74" },        // Laranja
+  { bg: "#ddd6fe", text: "#4a3580", border: "#c4b5fd" },        // Roxo
+  { bg: "#fecaca", text: "#6b2020", border: "#fca5a5" },        // Coral
+  { bg: "#a7f3d0", text: "#1a5a3a", border: "#6ee7b7" },        // Menta
+  { bg: "#c4b5fd", text: "#3b2d70", border: "#a78bfa" },        // Lavanda
+  { bg: "#fde68a", text: "#6b4e10", border: "#fbbf24" },        // Pêssego
+] as const;
+
+// Fontes disponíveis para post_style
+const EDITOR_FONTS = ["Nunito", "Quicksand", "Poppins", "Inter", "Comfortaa", "Montserrat", "Lato", "Raleway", "DM Sans", "Work Sans"] as const;
 
 function getPostItColor(postId: string) {
   let hash = 0;
@@ -150,6 +167,13 @@ interface PostWithAuthor {
   visibility?: "public" | "followers";
   shared_post_id?: string | null;
   shared_post?: PostWithAuthor | null;
+  post_style?: {
+    font?: string | null;
+    bold?: boolean;
+    italic?: boolean;
+    alignment?: "left" | "center" | "right" | "justify";
+    postItColor?: number | null;
+  } | null;
   author: { id: string; display_name: string; username: string; avatar_url?: string | null; neighborhood?: string | null };
   reactions: { user_id: string; type: string }[];
 }
@@ -335,28 +359,11 @@ function ShareMenu({
   post,
   onClose,
   onRepost,
-  triggerRef,
 }: {
   post: PostWithAuthor;
   onClose: () => void;
   onRepost: (post: PostWithAuthor) => void;
-  triggerRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-
-  useEffect(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPos({ top: rect.top - 4, right: window.innerWidth - rect.right });
-    const onScroll = () => {
-      if (!triggerRef.current) return;
-      const r = triggerRef.current.getBoundingClientRect();
-      setPos({ top: r.top - 4, right: window.innerWidth - r.right });
-    };
-    window.addEventListener("scroll", onScroll, true);
-    return () => window.removeEventListener("scroll", onScroll, true);
-  }, [triggerRef]);
-
   const handleExternalShare = async () => {
     const shareData = {
       title: `Post de ${post.author.display_name}`,
@@ -382,16 +389,8 @@ function ShareMenu({
     onClose();
   };
 
-  if (!pos) return null;
-
-  const menuHeight = 130;
-  const flipBelow = pos.top - menuHeight < 8;
-
   return (
-    <div
-      className="fixed w-12 rounded-2xl bg-[#f7f9fa] p-1 shadow-lg border border-[#0A4D5C]/10 z-[999] animate-in fade-in-0 zoom-in-95 flex flex-col items-center gap-0.5"
-      style={flipBelow ? { right: pos.right, top: pos.top + 36 } : { right: pos.right, bottom: window.innerHeight - pos.top }}
-    >
+    <div className="absolute right-0 bottom-full mb-2 w-12 rounded-2xl bg-[#f7f9fa] p-1 shadow-lg border border-[#0A4D5C]/10 z-30 animate-in fade-in-0 zoom-in-95 flex flex-col items-center gap-0.5">
       <button
         onClick={() => { onRepost(post); onClose(); }}
         className="flex items-center justify-center rounded-xl p-2.5 text-[#000305] transition-colors hover:bg-[#f7f75e]/20"
@@ -461,13 +460,14 @@ export function FeedView({ openUserProfile }: { openUserProfile?: (userId: strin
     else window.dispatchEvent(new CustomEvent("openUserProfile", { detail: { userId: uid } }));
   };
 
-  // Load Google Fonts for post-it notes (once)
+  // Carregar Google Fonts para post_style
   useEffect(() => {
-    if (document.getElementById("gdf-postit-fonts")) return;
+    const fontsParam = EDITOR_FONTS.map(
+      (f) => `family=${f.replace(/ /g, "+")}:wght@400;700`
+    ).join("&");
     const link = document.createElement("link");
-    link.id = "gdf-postit-fonts";
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Quicksand:wght@400;500;600;700&family=Poppins:wght@400;500;600&family=Inter:wght@400;500;600&family=Comfortaa:wght@400;500;600;700&family=Montserrat:wght@400;500;600&family=Lato:wght@400;700&family=Raleway:wght@400;500;600&family=DM+Sans:wght@400;500;600&family=Work+Sans:wght@400;500;600&display=swap";
+    link.href = `https://fonts.googleapis.com/css2?${fontsParam}&display=swap`;
     document.head.appendChild(link);
   }, []);
 
@@ -1338,11 +1338,17 @@ function PostThread({
   const isTextOnly = !hasPhotos && !hasVideo && !hasAudio;
 
   // ═══════ Post-it color for text-only posts ═══════
-  const postItColor = isTextOnly ? getPostItColor(post.id) : null;
+  // Se o post tem post_style com cor definida, usar essa cor; senão usar hash
+  const hasPostStyle = post.post_style && typeof post.post_style === "object";
+  const styleColorIdx = hasPostStyle && post.post_style!.postItColor != null ? post.post_style!.postItColor : -1;
+  const postItColor = isTextOnly ? (styleColorIdx >= 0 && styleColorIdx < POST_IT_COLORS.length ? POST_IT_COLORS[styleColorIdx] : getPostItColor(post.id)) : null;
+  const postItColorHex = isTextOnly ? (styleColorIdx >= 0 && styleColorIdx < POST_IT_COLORS_HEX.length ? POST_IT_COLORS_HEX[styleColorIdx] : null) : null;
 
   // Determine card background based on post type
+  // Se tem post_style com cor, usamos inline styles; senão Tailwind classes
+  const useInlineStyle = isTextOnly && styleColorIdx >= 0;
   const cardBg = isTextOnly
-    ? postItColor?.bg || "bg-[#fdf6b2]"
+    ? (useInlineStyle ? "" : (postItColor?.bg || "bg-[#fdf6b2]"))
     : hasAudio
       ? "bg-[#eef1f3]"
       : "bg-[#eef1f3]";
@@ -1463,7 +1469,10 @@ function PostThread({
   const { roots: commentRoots, map: commentMap } = buildCommentTree(comments);
 
   return (
-    <div className={`rounded-2xl ${cardBg} shadow-md overflow-hidden transition-shadow hover:shadow-lg ${isOwnPost ? "border-l-3 border-l-[#f7f75e]" : ""} ${isTextOnly && postItColor ? `border ${postItColor.border}` : "border border-[#0A4D5C]/8"}`}>
+    <div
+      className={`rounded-2xl ${cardBg} shadow-md overflow-hidden transition-shadow hover:shadow-lg ${isOwnPost ? "border-l-3 border-l-[#f7f75e]" : ""} ${isTextOnly && !useInlineStyle && postItColor ? `border ${postItColor.border}` : ""} ${!useInlineStyle ? "border border-[#0A4D5C]/8" : ""}`}
+      style={useInlineStyle && postItColorHex ? { backgroundColor: postItColorHex.bg, border: `1px solid ${postItColorHex.border}` } : undefined}
+    >
       <div className="p-3 sm:p-4">
         {/* Header */}
         <div className="flex items-start gap-2.5">
@@ -1492,7 +1501,16 @@ function PostThread({
 
             {/* Content */}
             {isTextOnly ? (
-              <p style={postItColor ? { fontFamily: postItColor.font } : undefined} className={`mt-1.5 text-base sm:text-lg leading-snug whitespace-pre-wrap ${postItColor?.text || "text-[#000305]"}`}>{post.content}</p>
+              <p
+                className={`mt-1.5 text-base sm:text-lg leading-snug whitespace-pre-wrap ${useInlineStyle ? "" : (postItColor?.text || "text-[#000305]")}`}
+                style={{
+                  fontFamily: hasPostStyle && post.post_style!.font ? `'${post.post_style!.font}', sans-serif` : "serif",
+                  fontWeight: hasPostStyle && post.post_style!.bold ? 700 : undefined,
+                  fontStyle: hasPostStyle && post.post_style!.italic ? "italic" : undefined,
+                  textAlign: hasPostStyle && post.post_style!.alignment ? post.post_style!.alignment : undefined,
+                  color: useInlineStyle && postItColorHex ? postItColorHex.text : undefined,
+                }}
+              >{post.content}</p>
             ) : (
               <p className="mt-1.5 text-[13px] sm:text-sm leading-relaxed whitespace-pre-wrap text-[#000305]">{post.content}</p>
             )}
@@ -1601,7 +1619,7 @@ function PostThread({
                   <Share2 className="h-4 w-4" />
                 </button>
                 {shareMenuOpen === post.id && (
-                  <ShareMenu post={post} onClose={() => setShareMenuOpen(null)} onRepost={onRepost} triggerRef={shareRef} />
+                  <ShareMenu post={post} onClose={() => setShareMenuOpen(null)} onRepost={onRepost} />
                 )}
               </div>
 
