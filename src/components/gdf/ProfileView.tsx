@@ -109,7 +109,23 @@ function formatDuration(seconds: number): string {
 }
 
 // ═══════════════════════════════════════════════════════════
-// FormattedText — parseia **bold**, _italic_, # H1, ## H2
+// Helpers para detectar e sanitizar HTML
+// ═══════════════════════════════════════════════════════════
+function isHTMLContent(content: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(content);
+}
+
+function sanitizeHTML(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\bon\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
+// ═══════════════════════════════════════════════════════════
+// FormattedText — renderiza HTML ou parseia markdown
 // ═══════════════════════════════════════════════════════════
 function parseInlineFormatting(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
@@ -152,6 +168,18 @@ function FormattedText({
   className?: string;
   style?: React.CSSProperties;
 }) {
+  // Se o conteúdo é HTML (posts criados com o editor WYSIWYG), renderizar como HTML
+  if (isHTMLContent(content)) {
+    return (
+      <div
+        className={`post-content ${className || ""}`}
+        style={style}
+        dangerouslySetInnerHTML={{ __html: sanitizeHTML(content) }}
+      />
+    );
+  }
+
+  // Posts antigos com markdown — parsear **bold**, _italic_, # H1, ## H2
   const lines = content.split("\n");
 
   return (
@@ -212,7 +240,6 @@ export function ProfileView() {
   const [activeTab, setActiveTab] = useState<"posts" | "postar">("posts");
 
   // ═══════ Composer state ═══════
-  const [content, setContent] = useState("");
   const [postStyle, setPostStyle] = useState<PostStyle>({
     font: null,
     bold: false,
@@ -223,8 +250,10 @@ export function ProfileView() {
   const [publishing, setPublishing] = useState(false);
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
   const fontMenuRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const [editorExpanded, setEditorExpanded] = useState(false);
+  const [textContent, setTextContent] = useState("");
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false });
 
   // Media state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -260,74 +289,39 @@ export function ProfileView() {
   const hasVideoInComposer = !!selectedVideo;
   const hasAudioInComposer = !!selectedAudio;
   const hasMediaInComposer = hasPhotosInComposer || hasVideoInComposer || hasAudioInComposer;
-  const canPost = !!profile && (content.trim().length > 0 || hasMediaInComposer);
+  const canPost = !!profile && (textContent.trim().length > 0 || hasMediaInComposer);
   const canAddPhotos = !hasVideoInComposer && !hasAudioInComposer && selectedFiles.length < MAX_PHOTOS_PER_POST;
   const canAddVideo = !hasPhotosInComposer && !hasAudioInComposer && !hasVideoInComposer;
   const canAddAudio = !hasPhotosInComposer && !hasVideoInComposer && !hasAudioInComposer;
 
-  // ═══════ Inline formatting helpers ═══════
-  const wrapSelection = (before: string, after: string) => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = content.slice(start, end);
-
-    if (selected.length > 0) {
-      // Verificar se o texto já está envolvido com os marcadores
-      const beforeText = content.slice(start - before.length, start);
-      const afterText = content.slice(end, end + after.length);
-      if (beforeText === before && afterText === after) {
-        // Remover marcadores existentes
-        const newContent = content.slice(0, start - before.length) + selected + content.slice(end + after.length);
-        setContent(newContent.slice(0, 500));
-        setTimeout(() => {
-          ta.selectionStart = start - before.length;
-          ta.selectionEnd = start - before.length + selected.length;
-          ta.focus();
-        }, 0);
-      } else {
-        // Adicionar marcadores
-        const newContent = content.slice(0, start) + before + selected + after + content.slice(end);
-        setContent(newContent.slice(0, 500));
-        setTimeout(() => {
-          ta.selectionStart = start + before.length;
-          ta.selectionEnd = end + before.length;
-          ta.focus();
-        }, 0);
-      }
-    } else {
-      // Sem seleção: toggle global
-      if (before === "**") {
-        setPostStyle((s) => ({ ...s, bold: !s.bold }));
-      } else if (before === "_") {
-        setPostStyle((s) => ({ ...s, italic: !s.italic }));
-      }
-    }
+  // ═══════ Rich text formatting helpers (WYSIWYG) ═══════
+  const handleBold = () => {
+    document.execCommand('bold');
+    editorRef.current?.focus();
   };
 
-  const toggleLinePrefix = (prefix: string) => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const cursorPos = ta.selectionStart;
+  const handleItalic = () => {
+    document.execCommand('italic');
+    editorRef.current?.focus();
+  };
 
-    // Encontrar início da linha atual
-    const lineStart = content.lastIndexOf("\n", cursorPos - 1) + 1;
-    const lineEnd = content.indexOf("\n", cursorPos);
-    const actualEnd = lineEnd === -1 ? content.length : lineEnd;
-    const currentLine = content.slice(lineStart, actualEnd);
+  const handleH1 = () => {
+    const current = document.queryCommandValue('formatBlock');
+    document.execCommand('formatBlock', false, current.toLowerCase() === 'h1' ? 'p' : 'h1');
+    editorRef.current?.focus();
+  };
 
-    // Remover prefixo de heading existente
-    let cleanLine = currentLine;
-    if (currentLine.startsWith("### ")) cleanLine = currentLine.slice(4);
-    else if (currentLine.startsWith("## ")) cleanLine = currentLine.slice(3);
-    else if (currentLine.startsWith("# ")) cleanLine = currentLine.slice(2);
+  const handleH2 = () => {
+    const current = document.queryCommandValue('formatBlock');
+    document.execCommand('formatBlock', false, current.toLowerCase() === 'h2' ? 'p' : 'h2');
+    editorRef.current?.focus();
+  };
 
-    // Adicionar o prefixo solicitado
-    const newLine = prefix + cleanLine;
-    const newContent = content.slice(0, lineStart) + newLine + content.slice(actualEnd);
-    setContent(newContent.slice(0, 500));
-    setTimeout(() => ta.focus(), 0);
+  const handleEditorInput = () => {
+    const el = editorRef.current;
+    if (el) {
+      setTextContent(el.textContent || "");
+    }
   };
 
   // Carregar Google Fonts
@@ -354,6 +348,18 @@ export function ProfileView() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [fontMenuOpen, mediaMenuOpen]);
+
+  // Track active formatting states
+  useEffect(() => {
+    const updateFormats = () => {
+      setActiveFormats({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+      });
+    };
+    document.addEventListener('selectionchange', updateFormats);
+    return () => document.removeEventListener('selectionchange', updateFormats);
+  }, []);
 
   // Cleanup recording on unmount
   useEffect(() => {
@@ -621,7 +627,7 @@ export function ProfileView() {
   // ═══════ Publicar post com estilo e mídia ═══════
   const handlePublish = async () => {
     if (!profile) return;
-    if (!content.trim() && !hasMediaInComposer) return;
+    if (!textContent.trim() && !hasMediaInComposer) return;
     setPublishing(true);
     try {
       let imageUrls: string[] = [];
@@ -641,7 +647,7 @@ export function ProfileView() {
         if (!audioUrl) { setPublishing(false); return; }
       }
 
-      const postContent = content.trim() || (
+      const postContent = textContent.trim() ? editorRef.current!.innerHTML : (
         selectedFiles.length > 0 ? "📷" :
         selectedVideo ? "🎥" :
         selectedAudio ? "🎙️" : ""
@@ -671,7 +677,8 @@ export function ProfileView() {
       });
       const data = await res.json();
       if (data.post) {
-        setContent("");
+        if (editorRef.current) editorRef.current.innerHTML = "";
+        setTextContent("");
         setPostStyle({ font: null, bold: false, italic: false, alignment: "left", postItColor: 0 });
         clearMedia();
         toast.success("Post publicado!");
@@ -691,6 +698,13 @@ export function ProfileView() {
 
   return (
     <div className="space-y-4">
+      {/* Global styles for rendered post content + editor */}
+      <style>{`
+        .editor-content h1, .post-content h1 { font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin: 0.35em 0 0.1em; }
+        .editor-content h2, .post-content h2 { font-size: 1.1rem; font-weight: 700; line-height: 1.3; margin: 0.25em 0 0.1em; }
+        .post-content b, .post-content strong { font-weight: 700; }
+        .post-content i, .post-content em { font-style: italic; }
+      `}</style>
       {/* ═══════ CARD DO PERFIL ═══════ */}
       <Card>
         <CardContent className="pt-6">
@@ -775,8 +789,7 @@ export function ProfileView() {
       </div>
 
       {/* ═══════ CONTEÚDO DAS ABAS ═══════ */}
-      {activeTab === "posts" ? (
-        <>
+      <div style={{ display: activeTab === "posts" ? "block" : "none" }}>
           {/* Meus Posts */}
           {myPosts.length > 0 ? (
             <div className="space-y-2">
@@ -850,31 +863,35 @@ export function ProfileView() {
           <Button variant="destructive" onClick={handleLogout} className="w-full gap-2">
             <LogOut className="h-4 w-4" /> Sair da conta
           </Button>
-        </>
-      ) : (
-        <>
+      </div>
+
+      <div style={{ display: activeTab === "postar" ? "block" : "none" }}>
           {/* ═══════ ABA POSTAR — MINI EDITOR COMPLETO ═══════ */}
           <div className="rounded-2xl bg-[#eef1f3] p-3 shadow-lg border border-[#0A4D5C]/8">
-            {/* Textarea com visualização de estilo */}
+            {/* ═══════ EDITOR WYSIWYG ═══════ */}
             <div
               className="rounded-xl border border-[#0A4D5C]/8 overflow-hidden transition-all"
               style={{ backgroundColor: selectedColor.bg }}
             >
               <div className="relative">
-                <textarea
-                  ref={textareaRef}
-                  placeholder="Escreva algo bonito... Selecione texto e use B/I para formatar"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value.slice(0, 500))}
-                  className={`w-full resize-none border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none placeholder:opacity-40 transition-all ${editorExpanded ? "min-h-[220px]" : "min-h-[100px]"}`}
+                {!textContent.trim() && (
+                  <div className="absolute top-0 left-0 right-0 px-3 py-2.5 text-sm pointer-events-none select-none" style={{ color: selectedColor.text, opacity: 0.4 }}>
+                    Escreva algo bonito... Selecione texto e use B/I para formatar
+                  </div>
+                )}
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  role="textbox"
+                  aria-multiline="true"
+                  onInput={handleEditorInput}
+                  className={`editor-content w-full border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none transition-all overflow-y-auto ${editorExpanded ? "min-h-[220px] max-h-[60vh]" : "min-h-[100px]"}`}
                   style={{
                     color: selectedColor.text,
                     fontFamily: postStyle.font ? `'${postStyle.font}', sans-serif` : undefined,
-                    fontWeight: postStyle.bold ? 700 : 400,
-                    fontStyle: postStyle.italic ? "italic" : "normal",
                     textAlign: postStyle.alignment || "left",
                   }}
-                  rows={editorExpanded ? 10 : 4}
+                  suppressContentEditableWarning
                 />
                 <button
                   onClick={() => setEditorExpanded(!editorExpanded)}
@@ -932,36 +949,36 @@ export function ProfileView() {
 
             {/* ═══════ TOOLBAR — LINHA 1: FORMATAÇÃO ═══════ */}
             <div className="flex items-center gap-1 mt-2 flex-wrap">
-              {/* Negrito — seleciona texto e aplica **...** */}
+              {/* Negrito */}
               <button
-                onClick={() => wrapSelection("**", "**")}
-                className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.bold ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                title="Negrito (selecione o texto)"
+                onClick={handleBold}
+                className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${activeFormats.bold ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                title="Negrito"
               >
                 <Bold className="h-3.5 w-3.5" />
               </button>
-              {/* Itálico — seleciona texto e aplica _..._ */}
+              {/* Itálico */}
               <button
-                onClick={() => wrapSelection("_", "_")}
-                className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${postStyle.italic ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
-                title="Itálico (selecione o texto)"
+                onClick={handleItalic}
+                className={`flex items-center justify-center rounded-md h-7 w-7 shrink-0 transition-colors ${activeFormats.italic ? "bg-[#0A4D5C] text-[#f7f9fa]" : "bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"}`}
+                title="Itálico"
               >
                 <Italic className="h-3.5 w-3.5" />
               </button>
 
               <div className="w-px h-4 bg-[#0A4D5C]/10 shrink-0" />
 
-              {/* H1 — adiciona # no início da linha */}
+              {/* H1 */}
               <button
-                onClick={() => toggleLinePrefix("# ")}
+                onClick={handleH1}
                 className="flex items-center justify-center rounded-md h-7 px-1.5 shrink-0 text-[10px] font-bold transition-colors bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"
                 title="Título H1"
               >
                 H1
               </button>
-              {/* H2 — adiciona ## no início da linha */}
+              {/* H2 */}
               <button
-                onClick={() => toggleLinePrefix("## ")}
+                onClick={handleH2}
                 className="flex items-center justify-center rounded-md h-7 px-1.5 shrink-0 text-[10px] font-bold transition-colors bg-[#0A4D5C]/[0.06] text-[#0A4D5C] hover:bg-[#0A4D5C]/10"
                 title="Título H2"
               >
@@ -1100,9 +1117,9 @@ export function ProfileView() {
               <div className="flex-1" />
 
               {/* Contagem */}
-              {content.trim().length > 0 && (
-                <span className={`text-[9px] shrink-0 ${content.length > 450 ? "text-red-500" : "text-[#0A4D5C]/30"}`}>
-                  {content.length}/500
+              {textContent.trim().length > 0 && (
+                <span className={`text-[9px] shrink-0 ${textContent.length > 450 ? "text-red-500" : "text-[#0A4D5C]/30"}`}>
+                  {textContent.length}/500
                 </span>
               )}
 
@@ -1118,8 +1135,7 @@ export function ProfileView() {
               </button>
             </div>
           </div>
-        </>
-      )}
+      </div>
 
       {/* Recording overlay */}
       {isRecordingAudio && (

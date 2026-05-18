@@ -109,8 +109,21 @@ const POST_IT_COLORS_HEX = [
 const EDITOR_FONTS = ["Nunito", "Quicksand", "Poppins", "Inter", "Comfortaa", "Montserrat", "Lato", "Raleway", "DM Sans", "Work Sans"] as const;
 
 // ═══════════════════════════════════════════════════════════
-// FormattedText — parseia **bold**, _italic_, # H1, ## H2
+// FormattedText — renderiza HTML ou parseia markdown
 // ═══════════════════════════════════════════════════════════
+function isHTMLContent(content: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(content);
+}
+
+function sanitizeHTML(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\bon\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
 function parseInlineFormatting(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|_(.+?)_)/g;
@@ -148,6 +161,18 @@ function FormattedText({
   className?: string;
   style?: React.CSSProperties;
 }) {
+  // Se o conteúdo é HTML (posts criados com o editor WYSIWYG), renderizar como HTML
+  if (isHTMLContent(content)) {
+    return (
+      <div
+        className={`post-content ${className || ""}`}
+        style={style}
+        dangerouslySetInnerHTML={{ __html: sanitizeHTML(content) }}
+      />
+    );
+  }
+
+  // Posts antigos com markdown — parsear **bold**, _italic_, # H1, ## H2
   const lines = content.split("\n");
 
   return (
@@ -1094,6 +1119,13 @@ export function FeedView({ openUserProfile }: { openUserProfile?: (userId: strin
 
   return (
     <div className="space-y-0">
+      {/* Styles for HTML post content */}
+      <style>{`
+        .post-content h1 { font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin: 0.35em 0 0.1em; }
+        .post-content h2 { font-size: 1.1rem; font-weight: 700; line-height: 1.3; margin: 0.25em 0 0.1em; }
+        .post-content b, .post-content strong { font-weight: 700; }
+        .post-content i, .post-content em { font-style: italic; }
+      `}</style>
       {/* ═══════ COMPOSER ═══════ */}
       <div className="relative z-10 rounded-3xl bg-[#eef1f3] p-5 shadow-lg border border-[#0A4D5C]/8">
         <div className="flex items-start gap-3.5">
