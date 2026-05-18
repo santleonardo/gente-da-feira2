@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
         bold: typeof postStyle.bold === "boolean" ? postStyle.bold : false,
         italic: typeof postStyle.italic === "boolean" ? postStyle.italic : false,
         alignment: validAlignments.includes(postStyle.alignment) ? postStyle.alignment : "left",
-        postItColor: typeof postStyle.postItColor === "number" && postStyle.postItColor >= 0 && postStyle.postItColor <= 9 ? postStyle.postItColor : null,
+        postItColor: typeof postStyle.postItColor === "number" && postStyle.postItColor >= 0 && postStyle.postItColor <= 11 ? postStyle.postItColor : null,
       };
       // Remove null font to keep it clean
       if (!validatedStyle.font) delete validatedStyle.font;
